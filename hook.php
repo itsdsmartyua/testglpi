@@ -1,22 +1,23 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Init hooks (MUST be here, not in setup.php)
- */
 function plugin_init_telegrambot(): void
 {
    global $PLUGIN_HOOKS;
 
    $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
 
-   // Our config page (NotificationSetting form)
+   // link from plugins page to our config form
    $PLUGIN_HOOKS['config_page']['telegrambot'] = 'front/notificationtelegrambotsetting.form.php';
 
-   // Register notification mode (Telegram)
-   $plugin = new \Plugin();
+   // Ensure GLPI can load our legacy classes (inc/)
+   require_once __DIR__ . '/inc/notificationtelegrambot.class.php';
+   require_once __DIR__ . '/inc/notificationtelegrambotsetting.class.php';
+
+   // Register notification mode for Templates/Notifications UI
+   $plugin = new Plugin();
    if ($plugin->isActivated('telegrambot')) {
-      \Notification_NotificationTemplate::registerMode(
+      Notification_NotificationTemplate::registerMode(
          'telegrambot',
          __('Telegram', 'telegrambot'),
          'telegrambot'
@@ -24,16 +25,13 @@ function plugin_init_telegrambot(): void
    }
 }
 
-/**
- * Install
- */
 function plugin_telegrambot_install(): bool
 {
-   \Config::setConfigurationValues('core', [
+   Config::setConfigurationValues('core', [
       'notifications_telegrambot' => 0,
    ]);
 
-   \Config::setConfigurationValues('plugin:telegrambot', [
+   Config::setConfigurationValues('plugin:telegrambot', [
       'bot_token_out'     => '',
       'parse_mode'        => 'HTML',
 
@@ -49,13 +47,10 @@ function plugin_telegrambot_install(): bool
    return true;
 }
 
-/**
- * Update (GLPI shows "Для обновления" until this exists)
- */
 function plugin_telegrambot_update($current_version = null): bool
 {
-   if (\Config::getConfigurationValue('core', 'notifications_telegrambot') === null) {
-      \Config::setConfigurationValues('core', ['notifications_telegrambot' => 0]);
+   if (Config::getConfigurationValue('core', 'notifications_telegrambot') === null) {
+      Config::setConfigurationValues('core', ['notifications_telegrambot' => 0]);
    }
 
    $defaults = [
@@ -69,20 +64,17 @@ function plugin_telegrambot_update($current_version = null): bool
    ];
 
    foreach ($defaults as $k => $v) {
-      if (\Config::getConfigurationValue('plugin:telegrambot', $k) === null) {
-         \Config::setConfigurationValues('plugin:telegrambot', [$k => $v]);
+      if (Config::getConfigurationValue('plugin:telegrambot', $k) === null) {
+         Config::setConfigurationValues('plugin:telegrambot', [$k => $v]);
       }
    }
 
    return true;
 }
 
-/**
- * Uninstall
- */
 function plugin_telegrambot_uninstall(): bool
 {
-   $config = new \Config();
+   $config = new Config();
 
    $config->deleteConfigurationValues('core', [
       'notifications_telegrambot',
