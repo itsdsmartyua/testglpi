@@ -18,7 +18,7 @@ function plugin_init_telegrambot(): void
    $plugin = new Plugin();
    if ($plugin->isActivated('telegrambot')) {
       Notification_NotificationTemplate::registerMode(
-         'telegrambot',
+         'telegram',
          __('Telegram', 'telegrambot'),
          'telegrambot'
       );
