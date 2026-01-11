@@ -3,11 +3,10 @@ declare(strict_types=1);
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Telegrambot\NotificationTelegrambotSetting;
-
 Session::checkRight('config', UPDATE);
 
-$setting = new NotificationTelegrambotSetting();
+// legacy class name that GLPI expects
+$setting = new PluginTelegrambotNotificationTelegrambotSetting();
 
 if (!empty($_POST['update'])) {
    $config = new Config();
