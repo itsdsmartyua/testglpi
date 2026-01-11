@@ -5,7 +5,7 @@ function plugin_version_telegrambot(): array
 {
    return [
       'name'           => 'Telegram Bot',
-      'version'        => '0.3.0',
+      'version'        => '0.3.1',
       'author'         => 'itsdsmartyua',
       'license'        => 'GPLv2+',
       'homepage'       => 'https://github.com/itsdsmartyua/testglpi',
