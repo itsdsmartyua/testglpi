@@ -19,7 +19,7 @@ class PluginTelegrambotNotificationTelegrambotSetting extends NotificationSettin
 
    public static function getMode(): string
    {
-      return 'telegrambot';
+      return 'telegram';
    }
 
    public static function canUpdate(): bool
