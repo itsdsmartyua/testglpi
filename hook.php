@@ -7,14 +7,12 @@ if (!defined('GLPI_ROOT')) {
 
 function plugin_init_telegrambot(): void
 {
-   global $PLUGIN_HOOKS, $CFG_GLPI;
+   global $PLUGIN_HOOKS;
 
    $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
+   $PLUGIN_HOOKS['config_page']['telegrambot']    = 'front/notificationwebsocketsetting.form.php';
 
-   // config page
-   $PLUGIN_HOOKS['config_page']['telegrambot'] = 'front/notificationwebsocketsetting.form.php';
-
-   // do not break UI if plugin files are missing
+   // Load plugin classes (do not crash GLPI if something missing)
    $need = [
       __DIR__ . '/inc/bot.class.php',
       __DIR__ . '/inc/fields.class.php',
@@ -29,40 +27,35 @@ function plugin_init_telegrambot(): void
       }
       require_once $f;
    }
-// ---- Register Telegram notification mode (GLPI 11 compatible) ----
-if (class_exists('Glpi\\Notification\\NotificationSetting')) {
-   if (!class_exists('NotificationSetting')) {
-      class_alias('Glpi\\Notification\\NotificationSetting', 'NotificationSetting');
-   }
-}
-
-if (class_exists('Notification_NotificationTemplate')
-    && method_exists('Notification_NotificationTemplate', 'registerMode')) {
-
-   Notification_NotificationTemplate::registerMode(
-      'telegram',
-      __('Telegram', 'telegrambot'),
-      'telegrambot'
-   );
-}
 
    if (!(new Plugin())->isActivated('telegrambot')) {
       return;
    }
 
-   // ---- Register notification MODE safely (no core require) ----
-   if (!isset($CFG_GLPI['notifications_modes']) || !is_array($CFG_GLPI['notifications_modes'])) {
-      $CFG_GLPI['notifications_modes'] = [];
+   // GLPI 11 namespace alias (for your setting class)
+   if (!class_exists('NotificationSetting') && class_exists('Glpi\\Notification\\NotificationSetting')) {
+      class_alias('Glpi\\Notification\\NotificationSetting', 'NotificationSetting');
    }
 
-   // Add / override our mode
-   $CFG_GLPI['notifications_modes']['telegram'] = [
-      'label' => __('Telegram', 'telegrambot'),
-      'from'  => 'telegrambot',
-   ];
+   // 1) Register mode (so it can exist in modes list)
+   if (class_exists('Notification_NotificationTemplate')
+       && method_exists('Notification_NotificationTemplate', 'registerMode')) {
 
-   // Ensure it is enabled by default (admin can still disable in notifications settings)
-   if (!isset($CFG_GLPI['notifications_telegram'])) {
-      $CFG_GLPI['notifications_telegram'] = 1;
+      Notification_NotificationTemplate::registerMode(
+         'telegram',
+         __('Telegram', 'telegrambot'),
+         'telegrambot'
+      );
+   }
+
+   // 2) Ensure mode is enabled in config (otherwise it won't appear in dropdown)
+   if (class_exists('Config') && method_exists('Config', 'setConfigurationValues')) {
+      // Do not force-disable/override admin choice, only ensure it exists once
+      if (!isset($_SESSION['plugin_telegrambot_notifications_bootstrapped'])) {
+         $_SESSION['plugin_telegrambot_notifications_bootstrapped'] = 1;
+         Config::setConfigurationValues('core', [
+            'notifications_telegram' => 1
+         ]);
+      }
    }
 }
