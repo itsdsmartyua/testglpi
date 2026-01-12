@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-// Robust include независимо от текущего working directory
 include_once __DIR__ . '/../../../inc/includes.php';
 
 Session::checkCentralAccess();
@@ -9,12 +8,15 @@ Session::checkCentralAccess();
 require_once __DIR__ . '/../inc/bot.class.php';
 require_once __DIR__ . '/../inc/notificationwebsocketsetting.class.php';
 
+global $CFG_GLPI;
+
 $setting = new PluginTelegrambotNotificationWebsocketSetting();
 
 if (isset($_POST['update'])) {
    $setting->postForm($_POST);
 
-   Html::redirect(Plugin::getWebDir('telegrambot', false) . '/front/notificationwebsocketsetting.form.php');
+   // ABSOLUTE redirect (prevents /plugins/.../plugins/... double path)
+   Html::redirect($CFG_GLPI['root_doc'] . '/plugins/telegrambot/front/notificationwebsocketsetting.form.php');
    exit;
 }
 

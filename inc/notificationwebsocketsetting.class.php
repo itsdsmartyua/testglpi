@@ -43,8 +43,12 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
          return false;
       }
 
+      global $CFG_GLPI;
+
       $cfg = PluginTelegrambotBot::getConfig();
-      $action = Plugin::getWebDir('telegrambot', false) . '/front/notificationwebsocketsetting.form.php';
+
+      // ABSOLUTE action to avoid /plugins/.../plugins/... duplication
+      $action = $CFG_GLPI['root_doc'] . '/plugins/telegrambot/front/notificationwebsocketsetting.form.php';
 
       echo "<form method='post' action='" . Html::cleanInputText($action) . "'>";
       echo "<div class='center spaced'>";
