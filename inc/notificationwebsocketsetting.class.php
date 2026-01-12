@@ -45,9 +45,7 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 
       global $CFG_GLPI;
 
-      $cfg = PluginTelegrambotBot::getConfig();
-
-      // ABSOLUTE action to avoid /plugins/.../plugins/... duplication
+      $cfg    = PluginTelegrambotBot::getConfig();
       $action = $CFG_GLPI['root_doc'] . '/plugins/telegrambot/front/notificationwebsocketsetting.form.php';
 
       echo "<form method='post' action='" . Html::cleanInputText($action) . "'>";
@@ -76,7 +74,7 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       echo "</table>";
 
       echo "<div class='center'>";
-      // GLPI CSRF field name
+      // GLPI 11 CSRF (listener will validate it)
       echo "<input type='hidden' name='_glpi_csrf_token' value='" . Html::cleanInputText(Session::getNewCSRFToken()) . "'>";
       echo "<input type='submit' name='update' class='submit' value='" . __('Save') . "'>";
       echo "</div>";
@@ -92,9 +90,9 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       if (!self::canUpdate()) {
          return false;
       }
-      if (!Session::checkCSRF($post)) {
-         return false;
-      }
+
+      // IMPORTANT: do NOT call Session::checkCSRF() here.
+      // GLPI 11 checks CSRF before controller execution (CheckCsrfListener).
 
       $data = [
          'notification_bot_token' => $post['notification_bot_token'] ?? '',
