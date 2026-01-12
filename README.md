@@ -18,3 +18,4 @@ sudo -u www-data HOME=/var/lib/www-data git fetch origin && \
 sudo -u www-data HOME=/var/lib/www-data git reset --hard origin/main && \
 sudo -u www-data php /var/www/glpi/bin/console glpi:cache:clear && \
 sudo systemctl restart apache2
+# codex
