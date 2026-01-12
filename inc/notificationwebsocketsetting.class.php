@@ -6,9 +6,9 @@ if (!defined('GLPI_ROOT')) {
 }
 
 /**
- * IMPORTANT:
- * - Must extend NotificationSetting (aliased in hook.php for GLPI 11 namespace change)
- * - showForm signature MUST match CommonDBTM::showForm($ID, array $options = [])
+ * Telegram notification channel settings
+ * - Extends NotificationSetting (aliased in hook.php for GLPI 11)
+ * - Method signatures must be compatible with CommonDBTM in GLPI 11
  */
 class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 {
@@ -17,7 +17,11 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       return __('Telegram', 'telegrambot');
    }
 
-   public function getName(): string
+   /**
+    * GLPI 11 compatibility: CommonDBTM::getName($options = [])
+    * Must NOT force return type.
+    */
+   public function getName($options = [])
    {
       return 'telegram';
    }
@@ -34,7 +38,6 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 
    /**
     * GLPI compatibility: CommonDBTM::showForm($ID, array $options = [])
-    * We ignore $ID because config is stored as single row (id=1).
     */
    public function showForm($ID, array $options = []): bool
    {
@@ -97,9 +100,6 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       return true;
    }
 
-   /**
-    * Called by our front controller
-    */
    public function postForm(array $post): bool
    {
       if (!$this->canUpdate()) {
@@ -110,16 +110,16 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       }
 
       $data = [
-         'notification_bot_token'  => $post['notification_bot_token'] ?? '',
-         'client_bot_token'        => $post['client_bot_token'] ?? '',
-         'user_chat_field'         => $post['user_chat_field'] ?? '',
-         'user_topic_field'        => $post['user_topic_field'] ?? '',
-         'group_chat_field'        => $post['group_chat_field'] ?? '',
-         'group_topic_field'       => $post['group_topic_field'] ?? '',
-         'client_user_chat_field'  => $post['client_user_chat_field'] ?? '',
-         'client_user_topic_field' => $post['client_user_topic_field'] ?? '',
-         'client_group_chat_field' => $post['client_group_chat_field'] ?? '',
-         'client_group_topic_field'=> $post['client_group_topic_field'] ?? '',
+         'notification_bot_token'   => $post['notification_bot_token'] ?? '',
+         'client_bot_token'         => $post['client_bot_token'] ?? '',
+         'user_chat_field'          => $post['user_chat_field'] ?? '',
+         'user_topic_field'         => $post['user_topic_field'] ?? '',
+         'group_chat_field'         => $post['group_chat_field'] ?? '',
+         'group_topic_field'        => $post['group_topic_field'] ?? '',
+         'client_user_chat_field'   => $post['client_user_chat_field'] ?? '',
+         'client_user_topic_field'  => $post['client_user_topic_field'] ?? '',
+         'client_group_chat_field'  => $post['client_group_chat_field'] ?? '',
+         'client_group_topic_field' => $post['client_group_topic_field'] ?? '',
       ];
 
       PluginTelegrambotBot::updateConfig($data);
