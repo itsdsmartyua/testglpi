@@ -16,23 +16,36 @@ function plugin_init_telegrambot(): void
 
    $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
 
-   // Fallback config page (always works)
+   // ALWAYS keep plugin config accessible from Plugins list
    $PLUGIN_HOOKS['config_page']['telegrambot'] = 'front/notificationwebsocketsetting.form.php';
 
-   // Load classes
-   require_once __DIR__ . '/inc/bot.class.php';
-   require_once __DIR__ . '/inc/fields.class.php';
-   require_once __DIR__ . '/inc/cron.class.php';
-   require_once __DIR__ . '/inc/notificationwebsocket.class.php';
-   require_once __DIR__ . '/inc/notificationeventwebsocket.class.php';
-   require_once __DIR__ . '/inc/notificationwebsocketsetting.class.php';
+   // Load classes defensively (if any missing -> do not break GLPI UI)
+   $files = [
+      __DIR__ . '/inc/bot.class.php',
+      __DIR__ . '/inc/fields.class.php',
+      __DIR__ . '/inc/cron.class.php',
+      __DIR__ . '/inc/notificationwebsocket.class.php',
+      __DIR__ . '/inc/notificationeventwebsocket.class.php',
+      __DIR__ . '/inc/notificationwebsocketsetting.class.php',
+   ];
 
-   if (!(new Plugin())->isActivated('telegrambot')) {
+   foreach ($files as $f) {
+      if (is_file($f)) {
+         require_once $f;
+      } else {
+         // don't crash GLPI if file missing
+         return;
+      }
+   }
+
+   // If plugin is not activated - stop here
+   if (!class_exists('Plugin') || !(new Plugin())->isActivated('telegrambot')) {
       return;
    }
 
-   // 1) Register Telegram as notification mode (standard templates)
-   if (class_exists('Notification_NotificationTemplate')) {
+   // Register Telegram notification mode (templates). Do it only if API exists.
+   if (class_exists('Notification_NotificationTemplate')
+       && method_exists('Notification_NotificationTemplate', 'registerMode')) {
       Notification_NotificationTemplate::registerMode(
          'telegram',
          __('Telegram', 'telegrambot'),
@@ -40,34 +53,8 @@ function plugin_init_telegrambot(): void
       );
    }
 
-   // 2) Register settings UI under Setup > Notifications (if GLPI provides API)
-   // Different GLPI builds expose different registration helpers; try safely.
-
-   // (A) Some versions provide NotificationSettingConfig::register($mode, $class)
-   if (class_exists('NotificationSettingConfig') && method_exists('NotificationSettingConfig', 'register')) {
-      NotificationSettingConfig::register('telegram', PluginTelegrambotNotificationWebsocketSetting::class);
-
-   // (B) Some versions provide Glpi\Notification\NotificationSetting::register($mode, $class)
-   } elseif (class_exists('Glpi\\Notification\\NotificationSetting') && method_exists('Glpi\\Notification\\NotificationSetting', 'register')) {
-      \Glpi\Notification\NotificationSetting::register('telegram', PluginTelegrambotNotificationWebsocketSetting::class);
-
-   // (C) Some versions provide NotificationSetting::register($mode, $class) via alias above
-   } elseif (class_exists('NotificationSetting') && method_exists('NotificationSetting', 'register')) {
-      NotificationSetting::register('telegram', PluginTelegrambotNotificationWebsocketSetting::class);
-   }
-
-   // 3) Cron tasks
-   $PLUGIN_HOOKS['cron']['telegrambot'] = [
-      'cronMessagelistener' => [
-         'function'   => 'plugin_telegrambot_cronMessagelistener',
-         'frequency'  => MINUTE_TIMESTAMP,
-         'mode'       => CronTask::MODE_EXTERNAL
-      ],
-      // lowercase wrapper for GLPI quirks
-      'cronmessagelistener' => [
-         'function'   => 'plugin_telegrambot_cronmessagelistener',
-         'frequency'  => MINUTE_TIMESTAMP,
-         'mode'       => CronTask::MODE_EXTERNAL
-      ],
-   ];
+   // IMPORTANT:
+   // We DO NOT register settings inside Setup > Notifications here,
+   // because your GLPI build doesn't have stable register API and it breaks UI.
+   // Config remains available via plugin config_page.
 }
