@@ -12,14 +12,14 @@ if (!class_exists('NotificationSetting') && class_exists('Glpi\\Notification\\No
 
 function plugin_init_telegrambot(): void
 {
-   global $PLUGIN_HOOKS;
+   global $PLUGIN_HOOKS, $CFG_GLPI;
 
    $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
 
-   // ALWAYS keep plugin config accessible from Plugins list
+   // Always keep config page accessible
    $PLUGIN_HOOKS['config_page']['telegrambot'] = 'front/notificationwebsocketsetting.form.php';
 
-   // Load classes defensively (if any missing -> do not break GLPI UI)
+   // Load plugin classes (defensive)
    $files = [
       __DIR__ . '/inc/bot.class.php',
       __DIR__ . '/inc/fields.class.php',
@@ -33,28 +33,43 @@ function plugin_init_telegrambot(): void
       if (is_file($f)) {
          require_once $f;
       } else {
-         // don't crash GLPI if file missing
+         // don't crash GLPI UI if something is missing
          return;
       }
    }
 
-   // If plugin is not activated - stop here
-   if (!class_exists('Plugin') || !(new Plugin())->isActivated('telegrambot')) {
+   if (!(new Plugin())->isActivated('telegrambot')) {
       return;
    }
 
-   // Register Telegram notification mode (templates). Do it only if API exists.
+   /**
+    * Register notification MODE so it appears in templates "Режим" dropdown.
+    * GLPI 11 still has Notification_NotificationTemplate::registerMode(),
+    * but it may not be autoloaded in plugin context => require file explicitly.
+    */
+   if (!class_exists('Notification_NotificationTemplate')) {
+      $core = GLPI_ROOT . '/src/Notification_NotificationTemplate.php';
+      if (is_file($core)) {
+         require_once $core;
+      }
+   }
+
    if (class_exists('Notification_NotificationTemplate')
        && method_exists('Notification_NotificationTemplate', 'registerMode')) {
+
       Notification_NotificationTemplate::registerMode(
          'telegram',
          __('Telegram', 'telegrambot'),
          'telegrambot'
       );
+
+      // Do not override admin choice, but ensure it is enabled by default in memory
+      // (mode list hides disabled modes: $CFG_GLPI['notifications_'.$mode])
+      if (!isset($CFG_GLPI['notifications_telegram'])) {
+         $CFG_GLPI['notifications_telegram'] = 1;
+      }
    }
 
-   // IMPORTANT:
-   // We DO NOT register settings inside Setup > Notifications here,
-   // because your GLPI build doesn't have stable register API and it breaks UI.
-   // Config remains available via plugin config_page.
+   // IMPORTANT: do NOT register NotificationSettingConfig here (it broke your UI).
+   // Config is managed via plugin config_page.
 }
