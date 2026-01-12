@@ -44,8 +44,6 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       }
 
       $cfg = PluginTelegrambotBot::getConfig();
-
-      // GLPI 11: Html::getFormUrlWithID() removed
       $action = Plugin::getWebDir('telegrambot', false) . '/front/notificationwebsocketsetting.form.php';
 
       echo "<form method='post' action='" . Html::cleanInputText($action) . "'>";
@@ -65,33 +63,17 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       echo "<tr class='tab_bg_1'><td>" . __('user_chat_field', 'telegrambot') . "</td>";
       echo "<td><input type='text' name='user_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['user_chat_field'] ?? 'telegram_chat_id')) . "'></td></tr>";
 
-      echo "<tr class='tab_bg_1'><td>" . __('user_topic_field (optional)', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='user_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['user_topic_field'] ?? 'telegram_topic_id')) . "'></td></tr>";
-
       echo "<tr class='tab_bg_1'><td>" . __('group_chat_field', 'telegrambot') . "</td>";
       echo "<td><input type='text' name='group_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_chat_field'] ?? 'telegram_chat_id')) . "'></td></tr>";
 
       echo "<tr class='tab_bg_1'><td>" . __('group_topic_field (optional)', 'telegrambot') . "</td>";
       echo "<td><input type='text' name='group_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_topic_field'] ?? 'telegram_topic_id')) . "'></td></tr>";
 
-      echo "<tr><th colspan='2'>" . __('Optional client_* mapping (if different)', 'telegrambot') . "</th></tr>";
-
-      echo "<tr class='tab_bg_1'><td>" . __('client_user_chat_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='client_user_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['client_user_chat_field'] ?? '')) . "'></td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>" . __('client_user_topic_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='client_user_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['client_user_topic_field'] ?? '')) . "'></td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>" . __('client_group_chat_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='client_group_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['client_group_chat_field'] ?? '')) . "'></td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>" . __('client_group_topic_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='client_group_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['client_group_topic_field'] ?? '')) . "'></td></tr>";
-
       echo "</table>";
 
       echo "<div class='center'>";
-      echo "<input type='hidden' name='csrf_token' value='" . Session::getNewCSRFToken() . "'>";
+      // GLPI CSRF field name
+      echo "<input type='hidden' name='_glpi_csrf_token' value='" . Html::cleanInputText(Session::getNewCSRFToken()) . "'>";
       echo "<input type='submit' name='update' class='submit' value='" . __('Save') . "'>";
       echo "</div>";
 
@@ -111,16 +93,11 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       }
 
       $data = [
-         'notification_bot_token'   => $post['notification_bot_token'] ?? '',
-         'client_bot_token'         => $post['client_bot_token'] ?? '',
-         'user_chat_field'          => $post['user_chat_field'] ?? '',
-         'user_topic_field'         => $post['user_topic_field'] ?? '',
-         'group_chat_field'         => $post['group_chat_field'] ?? '',
-         'group_topic_field'        => $post['group_topic_field'] ?? '',
-         'client_user_chat_field'   => $post['client_user_chat_field'] ?? '',
-         'client_user_topic_field'  => $post['client_user_topic_field'] ?? '',
-         'client_group_chat_field'  => $post['client_group_chat_field'] ?? '',
-         'client_group_topic_field' => $post['client_group_topic_field'] ?? '',
+         'notification_bot_token' => $post['notification_bot_token'] ?? '',
+         'client_bot_token'       => $post['client_bot_token'] ?? '',
+         'user_chat_field'        => $post['user_chat_field'] ?? 'telegram_chat_id',
+         'group_chat_field'       => $post['group_chat_field'] ?? 'telegram_chat_id',
+         'group_topic_field'      => $post['group_topic_field'] ?? 'telegram_topic_id',
       ];
 
       PluginTelegrambotBot::updateConfig($data);
