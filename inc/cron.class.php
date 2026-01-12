@@ -7,43 +7,48 @@ if (!defined('GLPI_ROOT')) {
 
 /**
  * Cron handler for TelegramBot plugin
- * - Handles client Telegram bot polling
- * - Provides lowercase wrapper for GLPI quirks
+ * Make this file idempotent:
+ * - avoid fatal "Cannot redeclare" if included twice by GLPI/hook
  */
-class PluginTelegrambotCron
-{
-   /**
-    * Main cron logic (CamelCase)
-    */
-   public static function cronMessagelistener(CronTask $task): int
+if (!class_exists('PluginTelegrambotCron', false)) {
+   class PluginTelegrambotCron
    {
-      // Poll client bot updates
-      $result = PluginTelegrambotBot::runClientBot();
+      /**
+       * Main cron logic (CamelCase)
+       */
+      public static function cronMessagelistener(CronTask $task): int
+      {
+         $result = PluginTelegrambotBot::runClientBot();
 
-      if (!empty($result['ok'])) {
-         $handled = (int)($result['handled'] ?? 0);
-         $task->log("Telegram client bot handled updates: {$handled}");
-         return $handled;
+         if (!empty($result['ok'])) {
+            $handled = (int)($result['handled'] ?? 0);
+            $task->log("Telegram client bot handled updates: {$handled}");
+            return $handled;
+         }
+
+         $error = (string)($result['error'] ?? 'unknown error');
+         $task->log("Telegram client bot error: {$error}");
+         return 0;
       }
-
-      $error = (string)($result['error'] ?? 'unknown error');
-      $task->log("Telegram client bot error: {$error}");
-      return 0;
    }
 }
 
 /**
  * Cron entrypoint (CamelCase)
  */
-function plugin_telegrambot_cronMessagelistener(CronTask $task): int
-{
-   return PluginTelegrambotCron::cronMessagelistener($task);
+if (!function_exists('plugin_telegrambot_cronMessagelistener')) {
+   function plugin_telegrambot_cronMessagelistener(CronTask $task): int
+   {
+      return PluginTelegrambotCron::cronMessagelistener($task);
+   }
 }
 
 /**
  * Lowercase wrapper (GLPI sometimes calls lowercase)
  */
-function plugin_telegrambot_cronmessagelistener(CronTask $task): int
-{
-   return plugin_telegrambot_cronMessagelistener($task);
+if (!function_exists('plugin_telegrambot_cronmessagelistener')) {
+   function plugin_telegrambot_cronmessagelistener(CronTask $task): int
+   {
+      return plugin_telegrambot_cronMessagelistener($task);
+   }
 }
