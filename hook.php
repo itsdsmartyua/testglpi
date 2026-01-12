@@ -1,95 +1,64 @@
 <?php
-/*
- -------------------------------------------------------------------------
- TelegramBot plugin for GLPI
- Copyright (C) 2017 by the TelegramBot Development Team.
+declare(strict_types=1);
 
- https://github.com/pluginsGLPI/telegrambot
- -------------------------------------------------------------------------
-
- LICENSE
-
- This file is part of TelegramBot.
-
- TelegramBot is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
- TelegramBot is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with TelegramBot. If not, see <http://www.gnu.org/licenses/>.
- --------------------------------------------------------------------------
- */
-
-/**
- * Plugin install process
- *
- * @return boolean
- */
-function plugin_telegrambot_install() {
-   global $DB;
-
-   $DB->runFile(GLPI_ROOT . '/plugins/telegrambot/db/install.sql');
-
-   Config::setConfigurationValues('core', ['notifications_websocket' => 0]);
-   Config::setConfigurationValues('plugin:telegrambot', [
-      'notification_token' => '',
-      'notification_bot_username' => '',
-      'client_token' => '',
-      'client_bot_username' => '',
-      'user_chat_field' => 'telegram_chat_id',
-      'user_topic_field' => 'telegram_topic_id',
-      'group_chat_field' => 'telegram_group_chat_id',
-      'group_topic_field' => 'telegram_group_topic_id',
-      'client_user_chat_field' => '',
-      'client_user_topic_field' => '',
-      'client_group_chat_field' => '',
-      'client_group_topic_field' => ''
-   ]);
-
-   CronTask::register(
-      'PluginTelegrambotCron',
-      'messagelistener',
-      5 * MINUTE_TIMESTAMP,
-      ['comment' => '', 'mode' => CronTask::MODE_EXTERNAL]
-   );
-
-   return true;
+if (!defined('GLPI_ROOT')) {
+   die("Sorry. You can't access this file directly");
 }
 
 /**
- * Plugin uninstall process
- *
- * @return boolean
+ * GLPI 11: NotificationSetting moved to Glpi\Notification\NotificationSetting
+ * Need alias so our setting class "extends NotificationSetting" and is instance of it.
  */
-function plugin_telegrambot_uninstall() {
-   global $DB;
-   $DB->runFile(GLPI_ROOT . '/plugins/telegrambot/db/uninstall.sql');
+if (!class_exists('NotificationSetting') && class_exists('Glpi\\Notification\\NotificationSetting')) {
+   class_alias('Glpi\\Notification\\NotificationSetting', 'NotificationSetting');
+}
 
-   $config = new Config();
-   $config->deleteConfigurationValues('core', ['notifications_websocket']);
-   $config->deleteConfigurationValues(
-      'plugin:telegrambot',
-      [
-         'notification_token',
-         'notification_bot_username',
-         'client_token',
-         'client_bot_username',
-         'user_chat_field',
-         'user_topic_field',
-         'group_chat_field',
-         'group_topic_field',
-         'client_user_chat_field',
-         'client_user_topic_field',
-         'client_group_chat_field',
-         'client_group_topic_field'
-      ]
-   );
+function plugin_init_telegrambot(): void
+{
+   global $PLUGIN_HOOKS;
 
-   return true;
+   $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
+
+   // Config page (Notification Setting UI)
+   $PLUGIN_HOOKS['config_page']['telegrambot'] = 'front/notificationwebsocketsetting.form.php';
+
+   // Legacy/required classes
+   require_once __DIR__ . '/inc/bot.class.php';
+   require_once __DIR__ . '/inc/fields.class.php';
+   require_once __DIR__ . '/inc/cron.class.php';
+   require_once __DIR__ . '/inc/notificationwebsocket.class.php';
+   require_once __DIR__ . '/inc/notificationeventwebsocket.class.php';
+   require_once __DIR__ . '/inc/notificationwebsocketsetting.class.php';
+
+   if ((new Plugin())->isActivated('telegrambot')) {
+
+      // 1) Register notification mode (channel) in standard GLPI notifications
+      Notification_NotificationTemplate::registerMode(
+         'telegram',
+         __('Telegram', 'telegrambot'),
+         'telegrambot'
+      );
+
+      // 2) Register settings handler for this mode (critical for UI inside Notifications)
+      NotificationSettingConfig::register(
+         'telegram',
+         PluginTelegrambotNotificationWebsocketSetting::class
+      );
+
+      // Cron
+      $PLUGIN_HOOKS['cron']['telegrambot'] = [
+         'cronMessagelistener' => [
+            'function'   => 'plugin_telegrambot_cronMessagelistener',
+            'frequency'  => MINUTE_TIMESTAMP, // recommended: 60s
+            'mode'       => CronTask::MODE_EXTERNAL
+         ]
+      ];
+
+      // lowercase wrapper (GLPI sometimes calls lowercase)
+      $PLUGIN_HOOKS['cron']['telegrambot']['cronmessagelistener'] = [
+         'function'   => 'plugin_telegrambot_cronmessagelistener',
+         'frequency'  => MINUTE_TIMESTAMP,
+         'mode'       => CronTask::MODE_EXTERNAL
+      ];
+   }
 }

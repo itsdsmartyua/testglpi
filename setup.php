@@ -1,110 +1,75 @@
 <?php
-/*
- -------------------------------------------------------------------------
- TelegramBot plugin for GLPI
- Copyright (C) 2017 by the TelegramBot Development Team.
+declare(strict_types=1);
 
- https://github.com/pluginsGLPI/telegrambot
- -------------------------------------------------------------------------
-
- LICENSE
-
- This file is part of TelegramBot.
-
- TelegramBot is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
- TelegramBot is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with TelegramBot. If not, see <http://www.gnu.org/licenses/>.
- --------------------------------------------------------------------------
- */
-
-define('PLUGIN_TELEGRAMBOT_VERSION', '11.0.4');
-
-/**
- * Init hooks of the plugin.
- * REQUIRED
- *
- * @return void
- */
-function plugin_init_telegrambot() {
-   global $PLUGIN_HOOKS;
-
-   $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
-
-   $plugin = new Plugin();
-
-   if ($plugin->isActivated('telegrambot')) {
-      $mode = Notification_NotificationTemplate::MODE_WEBSOCKET;
-      if (defined('Notification_NotificationTemplate::MODE_TELEGRAM')) {
-         $mode = Notification_NotificationTemplate::MODE_TELEGRAM;
-      }
-
-      Notification_NotificationTemplate::registerMode(
-         $mode,
-         __('Telegram', 'plugin_telegrambot'),
-         'telegrambot'
-      );
-   }
+if (!defined('GLPI_ROOT')) {
+   die("Sorry. You can't access this file directly");
 }
 
-/**
- * Get the name and the version of the plugin
- * REQUIRED
- *
- * @return array
- */
-function plugin_version_telegrambot() {
+define('PLUGIN_TELEGRAMBOT_VERSION', '11.0.4-1');
+define('PLUGIN_TELEGRAMBOT_MIN_GLPI', '11.0.4');
+define('PLUGIN_TELEGRAMBOT_MAX_GLPI', '11.99.99');
+
+function plugin_version_telegrambot(): array
+{
    return [
       'name'           => 'TelegramBot',
       'version'        => PLUGIN_TELEGRAMBOT_VERSION,
-      'author'         => '<a href="http://trulymanager.com" target="_blank">Truly Systems</a>',
-      'license'        => 'GPLv2+',
-      'homepage'       => 'https://github.com/pluginsGLPI/telegrambot',
-      'minGlpiVersion' => '11.0.0'
+      'author'         => 'Your Team',
+      'license'        => 'MIT',
+      'homepage'       => '',
+      'requirements'   => [
+         'glpi' => [
+            'min' => PLUGIN_TELEGRAMBOT_MIN_GLPI,
+            'max' => PLUGIN_TELEGRAMBOT_MAX_GLPI,
+         ],
+         'php'  => [
+            'min' => '8.2.0',
+         ],
+      ],
    ];
 }
 
-/**
- * Check pre-requisites before install
- * OPTIONNAL, but recommanded
- *
- * @return boolean
- */
-function plugin_telegrambot_check_prerequisites() {
-   // Strict version check (could be less strict, or could allow various version)
-   if (version_compare(GLPI_VERSION, '11.0.0', 'lt')) {
-      if (method_exists('Plugin', 'messageIncompatible')) {
-         echo Plugin::messageIncompatible('core', '11.0.0');
-      } else {
-         echo "This plugin requires GLPI >= 11.0.0";
-      }
+function plugin_telegrambot_check_prerequisites(): bool
+{
+   if (version_compare(GLPI_VERSION, PLUGIN_TELEGRAMBOT_MIN_GLPI, '<')) {
+      echo "This plugin requires GLPI >= " . PLUGIN_TELEGRAMBOT_MIN_GLPI;
+      return false;
+   }
+   if (version_compare(GLPI_VERSION, PLUGIN_TELEGRAMBOT_MAX_GLPI, '>')) {
+      echo "This plugin is not compatible with GLPI > " . PLUGIN_TELEGRAMBOT_MAX_GLPI;
       return false;
    }
    return true;
 }
 
-/**
- * Check configuration process
- *
- * @param boolean $verbose Whether to display message on failure. Defaults to false
- *
- * @return boolean
- */
-function plugin_telegrambot_check_config($verbose = false) {
-   if (true) { // Your configuration check
-      return true;
+function plugin_telegrambot_check_config(): bool
+{
+   return true;
+}
+
+function plugin_telegrambot_install(): bool
+{
+   global $DB;
+
+   $sql = __DIR__ . '/db/install.sql';
+   if (is_readable($sql)) {
+      $DB->runFile($sql);
    }
 
-   if ($verbose) {
-      _e('Installed / not configured', 'telegrambot');
+   // create default config row if not exists
+   require_once __DIR__ . '/inc/bot.class.php';
+   PluginTelegrambotBot::ensureDefaultConfig();
+
+   return true;
+}
+
+function plugin_telegrambot_uninstall(): bool
+{
+   global $DB;
+
+   $sql = __DIR__ . '/db/uninstall.sql';
+   if (is_readable($sql)) {
+      $DB->runFile($sql);
    }
-   return false;
+   return true;
 }

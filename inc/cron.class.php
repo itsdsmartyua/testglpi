@@ -1,31 +1,36 @@
+<?php
+declare(strict_types=1);
 
- LICENSE
+class PluginTelegrambotCron
+{
+   public static function cronMessagelistener(CronTask $task): int
+   {
+      $res = PluginTelegrambotBot::runClientBot();
 
- This file is part of TelegramBot.
+      if (!empty($res['ok'])) {
+         $handled = (int)($res['handled'] ?? 0);
+         $task->log("Telegram client bot handled updates: {$handled}");
+         return $handled;
+      }
 
- TelegramBot is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+      $err = (string)($res['error'] ?? 'unknown error');
+      $task->log("Telegram client bot error: {$err}");
+      return 0;
+   }
+}
 
- TelegramBot is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with TelegramBot. If not, see <http://www.gnu.org/licenses/>.
- --------------------------------------------------------------------------
+/**
+ * Cron entrypoints required by GLPI
  */
+function plugin_telegrambot_cronMessagelistener(CronTask $task): int
+{
+   return PluginTelegrambotCron::cronMessagelistener($task);
+}
 
-class PluginTelegrambotCron extends CronTask {
-
-   public static function cronMessagelistener(CronTask $task) {
-      PluginTelegrambotBot::getUpdates(PluginTelegrambotBot::BOT_CLIENT);
-      return 1;
-   }
-
-   public static function cronmessagelistener(CronTask $task) {
-      return self::cronMessagelistener($task);
-   }
+/**
+ * GLPI sometimes calls lowercase.
+ */
+function plugin_telegrambot_cronmessagelistener(CronTask $task): int
+{
+   return plugin_telegrambot_cronMessagelistener($task);
 }
