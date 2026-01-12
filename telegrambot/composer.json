@@ -1,0 +1,9 @@
+{
+  "name": "pluginsglpi/telegrambot",
+  "description": "Telegram bot notifications for GLPI",
+  "type": "glpi-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "longman/telegram-bot": "^0.81"
+  }
+}
