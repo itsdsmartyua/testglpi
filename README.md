@@ -1,21 +1,29 @@
-# telegrambot (GLPI 11)
+# GLPI TelegramBot (GLPI 11.0.4 / PHP 8.2 / MariaDB)
 
-Telegram notification mode for GLPI 11.0.4+ using standard Notifications.
+Плагин добавляет интеграцию Telegram для GLPI 11:
+- **Bot #1**: отправка уведомлений GLPI через стандартный механизм Notifications
+- **Bot #2**: клиентский бот (команды пользователей / специалистов) — сейчас только статистика
 
-## Fields(User)
-Create Fields container for **User**:
-- Container internal name: `telegram`
+Ключевая идея: **chat_id / topic_id НЕ хранятся в таблицах плагина**, а берутся из **полей плагина Fields** в объектах **Users** и **Groups**. Заполняются администратором вручную.
 
-Fields inside container:
-- `tg_chat_id_notify` (Text) — chat_id for outbound notifications
-- `tg_enabled` (Yes/No) — enable Telegram notifications for user
-- `tg_bot_out_enabled` (Yes/No) — allow outbound bot notifications
+---
 
-## Server sync from GitHub
+## Требования
+
+- GLPI 11.0.4
+- PHP 8.2
+- MariaDB/MySQL (InnoDB + utf8mb4)
+- Плагин **Fields** (для создания полей у Users/Groups)
+- Composer (для зависимостей Telegram SDK)
+
+---
+
+## Установка
+
+### 1) Размещение плагина
+Папка должна быть:
+`/var/www/glpi/plugins/telegrambot`
+
+Обновить код:
 ```bash
-cd /var/www/glpi/plugins/telegrambot && \
-sudo -u www-data HOME=/var/lib/www-data git fetch origin && \
-sudo -u www-data HOME=/var/lib/www-data git reset --hard origin/main && \
-sudo -u www-data php /var/www/glpi/bin/console glpi:cache:clear && \
-sudo systemctl restart apache2
-# codex
+cd /var/www/glpi/plugins/telegrambot || exit 1; git pull origin main
