@@ -45,7 +45,10 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 
       $cfg = PluginTelegrambotBot::getConfig();
 
-      echo "<form method='post' action='" . Html::getFormUrlWithID('notificationwebsocketsetting.form.php') . "'>";
+      // GLPI 11: Html::getFormUrlWithID() removed
+      $action = Plugin::getWebDir('telegrambot', false) . '/front/notificationwebsocketsetting.form.php';
+
+      echo "<form method='post' action='" . Html::cleanInputText($action) . "'>";
       echo "<div class='center spaced'>";
 
       echo "<table class='tab_cadre_fixe'>";
@@ -60,16 +63,16 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       echo "<tr><th colspan='2'>" . __('Fields plugin mapping (Users/Groups)', 'telegrambot') . "</th></tr>";
 
       echo "<tr class='tab_bg_1'><td>" . __('user_chat_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='user_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['user_chat_field'] ?? '')) . "'></td></tr>";
+      echo "<td><input type='text' name='user_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['user_chat_field'] ?? 'telegram_chat_id')) . "'></td></tr>";
 
       echo "<tr class='tab_bg_1'><td>" . __('user_topic_field (optional)', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='user_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['user_topic_field'] ?? '')) . "'></td></tr>";
+      echo "<td><input type='text' name='user_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['user_topic_field'] ?? 'telegram_topic_id')) . "'></td></tr>";
 
       echo "<tr class='tab_bg_1'><td>" . __('group_chat_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='group_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_chat_field'] ?? '')) . "'></td></tr>";
+      echo "<td><input type='text' name='group_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_chat_field'] ?? 'telegram_chat_id')) . "'></td></tr>";
 
       echo "<tr class='tab_bg_1'><td>" . __('group_topic_field (optional)', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='group_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_topic_field'] ?? '')) . "'></td></tr>";
+      echo "<td><input type='text' name='group_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_topic_field'] ?? 'telegram_topic_id')) . "'></td></tr>";
 
       echo "<tr><th colspan='2'>" . __('Optional client_* mapping (if different)', 'telegrambot') . "</th></tr>";
 
