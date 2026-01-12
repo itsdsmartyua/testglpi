@@ -1,125 +1,105 @@
 <?php
 declare(strict_types=1);
 
-use Longman\TelegramBot\Telegram;
-use Longman\TelegramBot\Request;
-
-require_once __DIR__ . '/../vendor/autoload.php';
-
 class PluginTelegrambotBot
 {
-   public const BOT_NOTIFICATION = 'notification';
-   public const BOT_CLIENT       = 'client';
+   public const CONFIG_TABLE = 'glpi_plugin_telegrambot_configs';
 
+   /**
+    * Safe read config (no direct SQL).
+    */
    public static function getConfig(): array
    {
       global $DB;
 
-      $table = 'glpi_plugin_telegrambot_configs';
-      if (!$DB->tableExists($table)) {
+      if (!$DB->tableExists(self::CONFIG_TABLE)) {
          return [];
       }
 
-      $res = $DB->query("SELECT * FROM `$table` ORDER BY id ASC LIMIT 1");
-      if ($res && $DB->numrows($res) > 0) {
-         return $DB->fetchAssoc($res);
+      $it = $DB->request([
+         'FROM'  => self::CONFIG_TABLE,
+         'LIMIT' => 1
+      ]);
+
+      foreach ($it as $row) {
+         return $row;
       }
+
       return [];
    }
 
-   public static function saveConfig(array $input): bool
+   /**
+    * Safe save config (upsert first row).
+    */
+   public static function saveConfig(array $input): void
    {
       global $DB;
 
-      $table = 'glpi_plugin_telegrambot_configs';
-      if (!$DB->tableExists($table)) {
-         return false;
+      if (!$DB->tableExists(self::CONFIG_TABLE)) {
+         return;
       }
 
-      $cfg = self::getConfig();
-      $id  = (int)($cfg['id'] ?? 0);
-      if ($id <= 0) {
-         $DB->query("INSERT INTO `$table` (`notification_bot_token`,`client_bot_token`,`updated_at`) VALUES ('','','" . $DB->escape(date('Y-m-d H:i:s')) . "')");
-         $cfg = self::getConfig();
-         $id  = (int)($cfg['id'] ?? 0);
+      $it = $DB->request([
+         'SELECT' => ['id'],
+         'FROM'   => self::CONFIG_TABLE,
+         'LIMIT'  => 1
+      ]);
+
+      $id = null;
+      foreach ($it as $row) {
+         $id = (int)$row['id'];
+         break;
       }
 
-      $fields = [
-         'notification_bot_token','client_bot_token',
-         'user_chat_field','user_topic_field',
-         'group_chat_field','group_topic_field',
-         'client_user_chat_field','client_user_topic_field',
-         'client_group_chat_field','client_group_topic_field'
+      // allowlist columns
+      $allowed = [
+         'notification_bot_token',
+         'client_bot_token',
+         'user_chat_field',
+         'user_topic_field',
+         'group_chat_field',
+         'group_topic_field',
+         'client_user_chat_field',
+         'client_user_topic_field',
+         'client_group_chat_field',
+         'client_group_topic_field',
+         'client_last_update_id',
+         'updated_at',
       ];
 
-      $sets = [];
-      foreach ($fields as $f) {
-         if (array_key_exists($f, $input)) {
-            $sets[] = "`$f`='" . $DB->escape((string)$input[$f]) . "'";
+      $data = [];
+      foreach ($allowed as $k) {
+         if (array_key_exists($k, $input)) {
+            $data[$k] = $input[$k];
          }
       }
 
-      $sets[] = "`updated_at`='" . $DB->escape(date('Y-m-d H:i:s')) . "'";
-      $sql = "UPDATE `$table` SET " . implode(',', $sets) . " WHERE `id`=" . (int)$id;
-      return (bool)$DB->query($sql);
-   }
-
-   public static function updateClientLastUpdateId(int $update_id): void
-   {
-      global $DB;
-
-      $cfg = self::getConfig();
-      $id  = (int)($cfg['id'] ?? 0);
-      if ($id <= 0) {
-         return;
-      }
-      $DB->query("UPDATE `glpi_plugin_telegrambot_configs` SET `client_last_update_id`=" . (int)$update_id
-         . ", `updated_at`='" . $DB->escape(date('Y-m-d H:i:s')) . "' WHERE `id`=" . (int)$id);
-   }
-
-   public static function getTelegram(string $type): ?Telegram
-   {
-      $cfg = self::getConfig();
-      if (!$cfg) {
-         return null;
+      // keep updated_at null or timestamp; most installs will leave it null
+      if (!array_key_exists('updated_at', $data)) {
+         $data['updated_at'] = null;
       }
 
-      $token = '';
-      if ($type === self::BOT_NOTIFICATION) {
-         $token = (string)($cfg['notification_bot_token'] ?? '');
-      } elseif ($type === self::BOT_CLIENT) {
-         $token = (string)($cfg['client_bot_token'] ?? '');
+      if ($id === null) {
+         // defaults if not provided
+         $defaults = [
+            'notification_bot_token'   => '',
+            'client_bot_token'         => '',
+            'user_chat_field'          => 'telegram_chat_id',
+            'user_topic_field'         => 'telegram_topic_id',
+            'group_chat_field'         => 'telegram_chat_id',
+            'group_topic_field'        => 'telegram_topic_id',
+            'client_user_chat_field'   => '',
+            'client_user_topic_field'  => '',
+            'client_group_chat_field'  => '',
+            'client_group_topic_field' => '',
+            'client_last_update_id'    => 0,
+            'updated_at'               => null,
+         ];
+
+         $DB->insert(self::CONFIG_TABLE, array_merge($defaults, $data));
+      } else {
+         $data['id'] = $id;
+         $DB->update(self::CONFIG_TABLE, $data, ['id' => $id]);
       }
-
-      $token = trim($token);
-      if ($token === '') {
-         return null;
-      }
-
-      return new Telegram($token, '');
-   }
-
-   public static function sendMessage(string $text, string $chat_id, ?string $topic_id = null): bool
-   {
-      $telegram = self::getTelegram(self::BOT_NOTIFICATION);
-      if (!$telegram) {
-         return false;
-      }
-
-      Request::initialize($telegram);
-
-      $data = [
-         'chat_id' => $chat_id,
-         'text'    => $text,
-         'parse_mode' => 'HTML',
-      ];
-
-      $topic_id = trim((string)$topic_id);
-      if ($topic_id !== '') {
-         $data['message_thread_id'] = (int)$topic_id;
-      }
-
-      $res = Request::sendMessage($data);
-      return $res->isOk();
    }
 }
