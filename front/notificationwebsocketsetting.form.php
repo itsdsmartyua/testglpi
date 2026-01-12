@@ -3,19 +3,23 @@ declare(strict_types=1);
 
 include_once __DIR__ . '/../../../inc/includes.php';
 
-Session::checkCentralAccess();
+global $CFG_GLPI;
+
+// Rights
+if (isset($_POST['update'])) {
+   Session::checkRight('config', UPDATE);
+} else {
+   Session::checkRight('config', READ);
+}
 
 require_once __DIR__ . '/../inc/bot.class.php';
 require_once __DIR__ . '/../inc/notificationwebsocketsetting.class.php';
-
-global $CFG_GLPI;
 
 $setting = new PluginTelegrambotNotificationWebsocketSetting();
 
 if (isset($_POST['update'])) {
    $setting->postForm($_POST);
 
-   // ABSOLUTE redirect (prevents /plugins/.../plugins/... double path)
    Html::redirect($CFG_GLPI['root_doc'] . '/plugins/telegrambot/front/notificationwebsocketsetting.form.php');
    exit;
 }
