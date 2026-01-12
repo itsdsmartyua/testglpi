@@ -1,109 +1,178 @@
-<?php
-declare(strict_types=1);
+LICENSE
+
+ This file is part of TelegramBot.
+
+ TelegramBot is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+
+ TelegramBot is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with TelegramBot. If not, see <http://www.gnu.org/licenses/>.
+ --------------------------------------------------------------------------
+ */
 
 if (!defined('GLPI_ROOT')) {
    die("Sorry. You can't access this file directly");
 }
 
-class PluginTelegrambotNotificationTelegrambotSetting extends NotificationSetting
-{
-   public static function getTypeName($nb = 0): string
-   {
-      return __('Telegram notifications configuration', 'telegrambot');
+/**
+*  This class manages the telegram notifications settings
+*/
+if (class_exists('Glpi\\Notification\\NotificationSetting')) {
+   class PluginTelegrambotNotificationWebsocketSetting extends Glpi\Notification\NotificationSetting {
+
+   static function getTypeName($nb = 0) {
+      return __('Telegram followups configuration', 'telegrambot');
    }
 
-   public function getEnableLabel(): string
-   {
-      return __('Enable Telegram notifications', 'telegrambot');
+   public function getEnableLabel() {
+      return __('Enable followups via Telegram', 'telegrambot');
    }
 
-   public static function getMode(): string
-   {
-      return 'telegram';
-   }
-
-   public static function canUpdate(): bool
-   {
-      return (bool) Session::haveRight('config', UPDATE);
-   }
-
-   public function showFormConfig($options = []): void
-   {
-      global $CFG_GLPI;
-
-      Session::checkRight('config', UPDATE);
-
-      $conf = Config::getConfigurationValues('plugin:telegrambot', [
-         'bot_token_out',
-         'parse_mode',
-         'fields_container',
-         'field_chat_id',
-         'field_enabled',
-         'field_out_enabled',
-         'debug',
-      ]);
-
-      $botToken   = (string)($conf['bot_token_out'] ?? '');
-      $parseMode  = (string)($conf['parse_mode'] ?? 'HTML');
-
-      $container  = (string)($conf['fields_container'] ?? 'telegram');
-      $fieldChat  = (string)($conf['field_chat_id'] ?? 'tg_chat_id_notify');
-      $fieldEn    = (string)($conf['field_enabled'] ?? 'tg_enabled');
-      $fieldOutEn = (string)($conf['field_out_enabled'] ?? 'tg_bot_out_enabled');
-
-      $debug      = (int)($conf['debug'] ?? 0);
-
-      echo "<form action='" . Toolbox::getItemTypeFormURL(__CLASS__) . "' method='post'>";
-      echo Html::hidden('config_context', ['value' => 'plugin:telegrambot']);
-      echo "<input type='hidden' name='id' value='1'>";
-
-      echo "<table class='tab_cadre_fixe'>";
-      echo "<tr class='tab_bg_1'><th colspan='4'>Telegram (telegrambot)</th></tr>";
-
-      if (empty($CFG_GLPI['notifications_telegrambot'])) {
-         echo "<tr class='tab_bg_1'><td colspan='4'>"
-            . __('Notifications are disabled.') . " "
-            . "<a href='{$CFG_GLPI['root_doc']}/front/setup.notification.php'>" . __('See configuration') . "</a>"
-            . "</td></tr>";
+   static public function getMode() {
+      if (defined('Notification_NotificationTemplate::MODE_TELEGRAM')) {
+         return Notification_NotificationTemplate::MODE_TELEGRAM;
       }
 
-      echo "<tr class='tab_bg_1'>";
-      echo "<td style='width:25%'>Bot token (outbound)</td>";
-      echo "<td style='width:75%' colspan='3'><input type='password' name='bot_token_out' style='width:100%' value='" . Html::cleanInputText($botToken) . "'></td>";
-      echo "</tr>";
+      return Notification_NotificationTemplate::MODE_WEBSOCKET;
+   }
 
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>Parse mode</td>";
-      echo "<td colspan='3'><select name='parse_mode'>";
-      foreach (['HTML', 'Markdown', 'MarkdownV2'] as $m) {
-         $sel = ($parseMode === $m) ? " selected='selected'" : '';
-         echo "<option value='" . Html::cleanInputText($m) . "'$sel>" . Html::cleanInputText($m) . "</option>";
-      }
-      echo "</select></td>";
-      echo "</tr>";
+   function showFormConfig($options = []) {
+      $notification_token = PluginTelegrambotBot::getConfig('notification_token');
+      $notification_bot_username = PluginTelegrambotBot::getConfig('notification_bot_username');
+      $client_token = PluginTelegrambotBot::getConfig('client_token');
+      $client_bot_username = PluginTelegrambotBot::getConfig('client_bot_username');
 
-      echo "<tr class='tab_bg_1'><th colspan='4'>Fields(User) mapping</th></tr>";
+      $user_chat_field = PluginTelegrambotBot::getConfig('user_chat_field');
+      $user_topic_field = PluginTelegrambotBot::getConfig('user_topic_field');
+@@ -110,26 +107,124 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 
-      echo "<tr class='tab_bg_1'><td>Container internal name</td>";
-      echo "<td colspan='3'><input type='text' name='fields_container' style='width:260px' value='" . Html::cleanInputText($container) . "'></td></tr>";
+      $out .= "<tr class='tab_bg_2'>";
+      $out .= "<td> " . __('Group chat ID field') . "</td><td>";
+      $out .= "<input type='text' name='group_chat_field' value='" . $group_chat_field . "' style='width: 100%'>";
+      $out .= "</td><td> " . __('Group topic ID field') . "</td><td>";
+      $out .= "<input type='text' name='group_topic_field' value='" . $group_topic_field . "' style='width: 100%'>";
+      $out .= "</td></tr>";
 
-      echo "<tr class='tab_bg_1'><td>Chat ID field</td>";
-      echo "<td colspan='3'><input type='text' name='field_chat_id' style='width:260px' value='" . Html::cleanInputText($fieldChat) . "'></td></tr>";
+      $out .= "<tr class='tab_bg_2'>";
+      $out .= "<td> " . __('Client user chat ID field (optional)') . "</td><td>";
+      $out .= "<input type='text' name='client_user_chat_field' value='" . $client_user_chat_field . "' style='width: 100%'>";
+      $out .= "</td><td> " . __('Client user topic ID field (optional)') . "</td><td>";
+      $out .= "<input type='text' name='client_user_topic_field' value='" . $client_user_topic_field . "' style='width: 100%'>";
+      $out .= "</td></tr>";
 
-      echo "<tr class='tab_bg_1'><td>Enabled field</td>";
-      echo "<td colspan='3'><input type='text' name='field_enabled' style='width:260px' value='" . Html::cleanInputText($fieldEn) . "'></td></tr>";
+      $out .= "<tr class='tab_bg_2'>";
+      $out .= "<td> " . __('Client group chat ID field (optional)') . "</td><td>";
+      $out .= "<input type='text' name='client_group_chat_field' value='" . $client_group_chat_field . "' style='width: 100%'>";
+      $out .= "</td><td> " . __('Client group topic ID field (optional)') . "</td><td>";
+      $out .= "<input type='text' name='client_group_topic_field' value='" . $client_group_topic_field . "' style='width: 100%'>";
+      $out .= "</td></tr>";
 
-      echo "<tr class='tab_bg_1'><td>Outbound enabled field</td>";
-      echo "<td colspan='3'><input type='text' name='field_out_enabled' style='width:260px' value='" . Html::cleanInputText($fieldOutEn) . "'></td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>Debug log</td>";
-      $checked = $debug ? "checked='checked'" : '';
-      echo "<td colspan='3'><label><input type='checkbox' name='debug' value='1' $checked> files/_log/telegrambot.log</label></td></tr>";
-
-      echo "</table>";
-
-      $options['candel'] = false;
+      echo $out;
       $this->showFormButtons($options);
-      echo "</form>";
+   }
+   }
+} else {
+   class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting {
+
+      static function getTypeName($nb = 0) {
+         return __('Telegram followups configuration', 'telegrambot');
+      }
+
+      public function getEnableLabel() {
+         return __('Enable followups via Telegram', 'telegrambot');
+      }
+
+      static public function getMode() {
+         if (defined('Notification_NotificationTemplate::MODE_TELEGRAM')) {
+            return Notification_NotificationTemplate::MODE_TELEGRAM;
+         }
+
+         return Notification_NotificationTemplate::MODE_WEBSOCKET;
+      }
+
+      function showFormConfig($options = []) {
+         $notification_token = PluginTelegrambotBot::getConfig('notification_token');
+         $notification_bot_username = PluginTelegrambotBot::getConfig('notification_bot_username');
+         $client_token = PluginTelegrambotBot::getConfig('client_token');
+         $client_bot_username = PluginTelegrambotBot::getConfig('client_bot_username');
+
+         $user_chat_field = PluginTelegrambotBot::getConfig('user_chat_field');
+         $user_topic_field = PluginTelegrambotBot::getConfig('user_topic_field');
+         $group_chat_field = PluginTelegrambotBot::getConfig('group_chat_field');
+         $group_topic_field = PluginTelegrambotBot::getConfig('group_topic_field');
+         $client_user_chat_field = PluginTelegrambotBot::getConfig('client_user_chat_field');
+         $client_user_topic_field = PluginTelegrambotBot::getConfig('client_user_topic_field');
+         $client_group_chat_field = PluginTelegrambotBot::getConfig('client_group_chat_field');
+         $client_group_topic_field = PluginTelegrambotBot::getConfig('client_group_topic_field');
+
+         $out = "<form action='" . Toolbox::getItemTypeFormURL(__CLASS__) . "' method='post'>";
+         $out .= "<div>";
+         $out .= "<table class='tab_cadre_fixe'>";
+         $out .= "<tr class='tab_bg_1'>" .
+            "<th colspan='4'>" . _n('Telegram notification', 'Telegram notifications', Session::getPluralNumber()) . "</th>" .
+            "</tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('Notification bot token') . "</td><td>";
+         $out .= "<input type='text' name='notification_token' value='" . $notification_token . "' style='width: 100%'>";
+         $out .= "</td><td colspan='2'>&nbsp;</td></tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('Notification bot username') . "</td><td>";
+         $out .= "<input type='text' name='notification_bot_username' value='" . $notification_bot_username . "' style='width: 100%'>";
+         $out .= "</td><td colspan='2'>&nbsp;</td></tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('Client bot token') . "</td><td>";
+         $out .= "<input type='text' name='client_token' value='" . $client_token . "' style='width: 100%'>";
+         $out .= "</td><td colspan='2'>&nbsp;</td></tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('Client bot username') . "</td><td>";
+         $out .= "<input type='text' name='client_bot_username' value='" . $client_bot_username . "' style='width: 100%'>";
+         $out .= "</td><td colspan='2'>&nbsp;</td></tr>";
+
+         $out .= "<tr class='tab_bg_1'>";
+         $out .= "<th colspan='4'>" . __('Fields (plugin Fields)', 'telegrambot') . "</th>";
+         $out .= "</tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('User chat ID field') . "</td><td>";
+         $out .= "<input type='text' name='user_chat_field' value='" . $user_chat_field . "' style='width: 100%'>";
+         $out .= "</td><td> " . __('User topic ID field') . "</td><td>";
+         $out .= "<input type='text' name='user_topic_field' value='" . $user_topic_field . "' style='width: 100%'>";
+         $out .= "</td></tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('Group chat ID field') . "</td><td>";
+         $out .= "<input type='text' name='group_chat_field' value='" . $group_chat_field . "' style='width: 100%'>";
+         $out .= "</td><td> " . __('Group topic ID field') . "</td><td>";
+         $out .= "<input type='text' name='group_topic_field' value='" . $group_topic_field . "' style='width: 100%'>";
+         $out .= "</td></tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('Client user chat ID field (optional)') . "</td><td>";
+         $out .= "<input type='text' name='client_user_chat_field' value='" . $client_user_chat_field . "' style='width: 100%'>";
+         $out .= "</td><td> " . __('Client user topic ID field (optional)') . "</td><td>";
+         $out .= "<input type='text' name='client_user_topic_field' value='" . $client_user_topic_field . "' style='width: 100%'>";
+         $out .= "</td></tr>";
+
+         $out .= "<tr class='tab_bg_2'>";
+         $out .= "<td> " . __('Client group chat ID field (optional)') . "</td><td>";
+         $out .= "<input type='text' name='client_group_chat_field' value='" . $client_group_chat_field . "' style='width: 100%'>";
+         $out .= "</td><td> " . __('Client group topic ID field (optional)') . "</td><td>";
+         $out .= "<input type='text' name='client_group_topic_field' value='" . $client_group_topic_field . "' style='width: 100%'>";
+         $out .= "</td></tr>";
+
+         echo $out;
+         $this->showFormButtons($options);
+      }
    }
 }
