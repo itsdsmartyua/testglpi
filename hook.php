@@ -1,102 +1,95 @@
 <?php
-declare(strict_types=1);
+/*
+ -------------------------------------------------------------------------
+ TelegramBot plugin for GLPI
+ Copyright (C) 2017 by the TelegramBot Development Team.
 
-function plugin_init_telegrambot(): void
-{
-   global $PLUGIN_HOOKS;
+ https://github.com/pluginsGLPI/telegrambot
+ -------------------------------------------------------------------------
 
-   $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
-   $PLUGIN_HOOKS['config_page']['telegrambot'] = 'front/notificationtelegrambotsetting.form.php';
+ LICENSE
 
-   // legacy classes
-   require_once __DIR__ . '/inc/notificationtelegrambot.class.php';
-   require_once __DIR__ . '/inc/notificationtelegrambotsetting.class.php';
+ This file is part of TelegramBot.
 
-   if ((new Plugin())->isActivated('telegrambot')) {
+ TelegramBot is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
 
-      // 1) register notification "mode" so it appears in templates
-      Notification_NotificationTemplate::registerMode(
-         'telegram',
-         __('Telegram', 'telegrambot'),
-         'telegrambot'
-      );
+ TelegramBot is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-      // 2) register setting class so GLPI shows it in UI
-      NotificationSettingConfig::register(
-         'telegram',
-         PluginTelegrambotNotificationTelegrambotSetting::class
-      );
-   }
-}
+ You should have received a copy of the GNU General Public License
+ along with TelegramBot. If not, see <http://www.gnu.org/licenses/>.
+ --------------------------------------------------------------------------
+ */
 
-function plugin_telegrambot_install(): bool
-{
-   // Enable/disable flag for this mode
-   Config::setConfigurationValues('core', [
-      'notifications_telegram' => 0,
-   ]);
+/**
+ * Plugin install process
+ *
+ * @return boolean
+ */
+function plugin_telegrambot_install() {
+   global $DB;
 
-   // Plugin config
+   $DB->runFile(GLPI_ROOT . '/plugins/telegrambot/db/install.sql');
+
+   Config::setConfigurationValues('core', ['notifications_websocket' => 0]);
    Config::setConfigurationValues('plugin:telegrambot', [
-      'bot_token_out'     => '',
-      'parse_mode'        => 'HTML',
-
-      // Fields(User) mapping
-      'fields_container'  => 'telegram',
-      'field_chat_id'     => 'tg_chat_id_notify',
-      'field_enabled'     => 'tg_enabled',
-      'field_out_enabled' => 'tg_bot_out_enabled',
-
-      'debug'             => 0,
+      'notification_token' => '',
+      'notification_bot_username' => '',
+      'client_token' => '',
+      'client_bot_username' => '',
+      'user_chat_field' => 'telegram_chat_id',
+      'user_topic_field' => 'telegram_topic_id',
+      'group_chat_field' => 'telegram_group_chat_id',
+      'group_topic_field' => 'telegram_group_topic_id',
+      'client_user_chat_field' => '',
+      'client_user_topic_field' => '',
+      'client_group_chat_field' => '',
+      'client_group_topic_field' => ''
    ]);
 
-   return true;
-}
-
-function plugin_telegrambot_update($current_version = null): bool
-{
-   // Ensure core flag exists
-   if (Config::getConfigurationValue('core', 'notifications_telegram') === null) {
-      Config::setConfigurationValues('core', ['notifications_telegram' => 0]);
-   }
-
-   // Ensure plugin defaults exist without overwriting existing values
-   $defaults = [
-      'bot_token_out'     => '',
-      'parse_mode'        => 'HTML',
-      'fields_container'  => 'telegram',
-      'field_chat_id'     => 'tg_chat_id_notify',
-      'field_enabled'     => 'tg_enabled',
-      'field_out_enabled' => 'tg_bot_out_enabled',
-      'debug'             => 0,
-   ];
-
-   foreach ($defaults as $k => $v) {
-      if (Config::getConfigurationValue('plugin:telegrambot', $k) === null) {
-         Config::setConfigurationValues('plugin:telegrambot', [$k => $v]);
-      }
-   }
+   CronTask::register(
+      'PluginTelegrambotCron',
+      'messagelistener',
+      5 * MINUTE_TIMESTAMP,
+      ['comment' => '', 'mode' => CronTask::MODE_EXTERNAL]
+   );
 
    return true;
 }
 
-function plugin_telegrambot_uninstall(): bool
-{
+/**
+ * Plugin uninstall process
+ *
+ * @return boolean
+ */
+function plugin_telegrambot_uninstall() {
+   global $DB;
+   $DB->runFile(GLPI_ROOT . '/plugins/telegrambot/db/uninstall.sql');
+
    $config = new Config();
-
-   $config->deleteConfigurationValues('core', [
-      'notifications_telegram',
-   ]);
-
-   $config->deleteConfigurationValues('plugin:telegrambot', [
-      'bot_token_out',
-      'parse_mode',
-      'fields_container',
-      'field_chat_id',
-      'field_enabled',
-      'field_out_enabled',
-      'debug',
-   ]);
+   $config->deleteConfigurationValues('core', ['notifications_websocket']);
+   $config->deleteConfigurationValues(
+      'plugin:telegrambot',
+      [
+         'notification_token',
+         'notification_bot_username',
+         'client_token',
+         'client_bot_username',
+         'user_chat_field',
+         'user_topic_field',
+         'group_chat_field',
+         'group_topic_field',
+         'client_user_chat_field',
+         'client_user_topic_field',
+         'client_group_chat_field',
+         'client_group_topic_field'
+      ]
+   );
 
    return true;
 }
