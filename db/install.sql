@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_user` (
-  `id` bigint COMMENT 'Unique user identifier',
+  `id` bigint unsigned COMMENT 'Unique user identifier',
   `is_bot` tinyint(1) DEFAULT 0 COMMENT 'True if this user is a bot',
   `first_name` CHAR(255) NOT NULL DEFAULT '' COMMENT 'User''s first name',
   `last_name` CHAR(255) DEFAULT NULL COMMENT 'User''s last name',
@@ -10,35 +10,35 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_user` (
 
   PRIMARY KEY (`id`),
   KEY `username` (`username`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_chat` (
-  `id` bigint COMMENT 'Unique user or chat identifier',
+  `id` bigint unsigned COMMENT 'Unique user or chat identifier',
   `type` ENUM('private', 'group', 'supergroup', 'channel') NOT NULL COMMENT 'Chat type, either private, group, supergroup or channel',
   `title` CHAR(255) DEFAULT '' COMMENT 'Chat (group) title, is null if chat type is private',
   `username` CHAR(255) DEFAULT NULL COMMENT 'Username, for private chats, supergroups and channels if available',
   `all_members_are_administrators` tinyint(1) DEFAULT 0 COMMENT 'True if a all members of this group are admins',
   `created_at` timestamp NULL DEFAULT NULL COMMENT 'Entry date creation',
   `updated_at` timestamp NULL DEFAULT NULL COMMENT 'Entry date update',
-  `old_id` bigint DEFAULT NULL COMMENT 'Unique chat identifier, this is filled when a group is converted to a supergroup',
+  `old_id` bigint unsigned DEFAULT NULL COMMENT 'Unique chat identifier, this is filled when a group is converted to a supergroup',
 
   PRIMARY KEY (`id`),
   KEY `old_id` (`old_id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_user_chat` (
-  `user_id` bigint COMMENT 'Unique user identifier',
-  `chat_id` bigint COMMENT 'Unique user or chat identifier',
+  `user_id` bigint unsigned COMMENT 'Unique user identifier',
+  `chat_id` bigint unsigned COMMENT 'Unique user or chat identifier',
 
   PRIMARY KEY (`user_id`, `chat_id`),
 
   FOREIGN KEY (`user_id`) REFERENCES `glpi_plugin_telegrambot_user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`chat_id`) REFERENCES `glpi_plugin_telegrambot_chat` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_inline_query` (
   `id` bigint UNSIGNED COMMENT 'Unique identifier for this query',
-  `user_id` bigint NULL COMMENT 'Unique user identifier',
+  `user_id` bigint unsigned NULL COMMENT 'Unique user identifier',
   `location` CHAR(255) NULL DEFAULT NULL COMMENT 'Location of the user',
   `query` TEXT NOT NULL COMMENT 'Text of the query',
   `offset` CHAR(255) NULL DEFAULT NULL COMMENT 'Offset of the result',
@@ -48,12 +48,12 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_inline_query` (
   KEY `user_id` (`user_id`),
 
   FOREIGN KEY (`user_id`) REFERENCES `glpi_plugin_telegrambot_user` (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_chosen_inline_result` (
   `id` bigint UNSIGNED AUTO_INCREMENT COMMENT 'Unique identifier for this entry',
   `result_id` CHAR(255) NOT NULL DEFAULT '' COMMENT 'Identifier for this result',
-  `user_id` bigint NULL COMMENT 'Unique user identifier',
+  `user_id` bigint unsigned NULL COMMENT 'Unique user identifier',
   `location` CHAR(255) NULL DEFAULT NULL COMMENT 'Location object, user''s location',
   `inline_message_id` CHAR(255) NULL DEFAULT NULL COMMENT 'Identifier of the sent inline message',
   `query` TEXT NOT NULL COMMENT 'The query that was used to obtain the result',
@@ -63,18 +63,18 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_chosen_inline_result` (
   KEY `user_id` (`user_id`),
 
   FOREIGN KEY (`user_id`) REFERENCES `glpi_plugin_telegrambot_user` (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_message` (
-  `chat_id` bigint COMMENT 'Unique chat identifier',
+  `chat_id` bigint unsigned COMMENT 'Unique chat identifier',
   `id` bigint UNSIGNED COMMENT 'Unique message identifier',
-  `user_id` bigint NULL COMMENT 'Unique user identifier',
+  `user_id` bigint unsigned NULL COMMENT 'Unique user identifier',
   `date` timestamp NULL DEFAULT NULL COMMENT 'Date the message was sent in timestamp format',
-  `forward_from` bigint NULL DEFAULT NULL COMMENT 'Unique user identifier, sender of the original message',
-  `forward_from_chat` bigint NULL DEFAULT NULL COMMENT 'Unique chat identifier, chat the original message belongs to',
-  `forward_from_message_id` bigint NULL DEFAULT NULL COMMENT 'Unique chat identifier of the original message in the channel',
+  `forward_from` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique user identifier, sender of the original message',
+  `forward_from_chat` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique chat identifier, chat the original message belongs to',
+  `forward_from_message_id` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique chat identifier of the original message in the channel',
   `forward_date` timestamp NULL DEFAULT NULL COMMENT 'date the original message was sent in timestamp format',
-  `reply_to_chat` bigint NULL DEFAULT NULL COMMENT 'Unique chat identifier',
+  `reply_to_chat` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique chat identifier',
   `reply_to_message` bigint UNSIGNED DEFAULT NULL COMMENT 'Message that this message is reply to',
   `text` TEXT COMMENT 'For text messages, the actual UTF-8 text of the message max message length 4096 char utf8mb4',
   `entities` TEXT COMMENT 'For text messages, special entities like usernames, URLs, bot commands, etc. that appear in the text',
@@ -90,15 +90,15 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_message` (
   `venue` TEXT COMMENT 'Venue object. Message is a Venue, information about the Venue',
   `caption` TEXT COMMENT  'For message with caption, the actual UTF-8 text of the caption',
   `new_chat_members` TEXT COMMENT 'List of unique user identifiers, new member(s) were added to the group, information about them (one of these members may be the bot itself)',
-  `left_chat_member` bigint NULL DEFAULT NULL COMMENT 'Unique user identifier, a member was removed from the group, information about them (this member may be the bot itself)',
+  `left_chat_member` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique user identifier, a member was removed from the group, information about them (this member may be the bot itself)',
   `new_chat_title` CHAR(255) DEFAULT NULL COMMENT 'A chat title was changed to this value',
   `new_chat_photo` TEXT COMMENT 'Array of PhotoSize objects. A chat photo was change to this value',
   `delete_chat_photo` tinyint(1) DEFAULT 0 COMMENT 'Informs that the chat photo was deleted',
   `group_chat_created` tinyint(1) DEFAULT 0 COMMENT 'Informs that the group has been created',
   `supergroup_chat_created` tinyint(1) DEFAULT 0 COMMENT 'Informs that the supergroup has been created',
   `channel_chat_created` tinyint(1) DEFAULT 0 COMMENT 'Informs that the channel chat has been created',
-  `migrate_to_chat_id` bigint NULL DEFAULT NULL COMMENT 'Migrate to chat identifier. The group has been migrated to a supergroup with the specified identifier',
-  `migrate_from_chat_id` bigint NULL DEFAULT NULL COMMENT 'Migrate from chat identifier. The supergroup has been migrated from a group with the specified identifier',
+  `migrate_to_chat_id` bigint unsigned NULL DEFAULT NULL COMMENT 'Migrate to chat identifier. The group has been migrated to a supergroup with the specified identifier',
+  `migrate_from_chat_id` bigint unsigned NULL DEFAULT NULL COMMENT 'Migrate from chat identifier. The supergroup has been migrated from a group with the specified identifier',
   `pinned_message` TEXT NULL COMMENT 'Message object. Specified message was pinned',
 
   PRIMARY KEY (`chat_id`, `id`),
@@ -118,12 +118,12 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_message` (
   FOREIGN KEY (`reply_to_chat`, `reply_to_message`) REFERENCES `glpi_plugin_telegrambot_message` (`chat_id`, `id`),
   FOREIGN KEY (`forward_from`) REFERENCES `glpi_plugin_telegrambot_user` (`id`),
   FOREIGN KEY (`left_chat_member`) REFERENCES `glpi_plugin_telegrambot_user` (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_callback_query` (
   `id` bigint UNSIGNED COMMENT 'Unique identifier for this query',
-  `user_id` bigint NULL COMMENT 'Unique user identifier',
-  `chat_id` bigint NULL COMMENT 'Unique chat identifier',
+  `user_id` bigint unsigned NULL COMMENT 'Unique user identifier',
+  `chat_id` bigint unsigned NULL COMMENT 'Unique chat identifier',
   `message_id` bigint UNSIGNED COMMENT 'Unique message identifier',
   `inline_message_id` CHAR(255) NULL DEFAULT NULL COMMENT 'Identifier of the message sent via the bot in inline mode, that originated the query',
   `data` CHAR(255) NOT NULL DEFAULT '' COMMENT 'Data associated with the callback button',
@@ -136,13 +136,13 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_callback_query` (
 
   FOREIGN KEY (`user_id`) REFERENCES `glpi_plugin_telegrambot_user` (`id`),
   FOREIGN KEY (`chat_id`, `message_id`) REFERENCES `glpi_plugin_telegrambot_message` (`chat_id`, `id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_edited_message` (
   `id` bigint UNSIGNED AUTO_INCREMENT COMMENT 'Unique identifier for this entry',
-  `chat_id` bigint COMMENT 'Unique chat identifier',
+  `chat_id` bigint unsigned COMMENT 'Unique chat identifier',
   `message_id` bigint UNSIGNED COMMENT 'Unique message identifier',
-  `user_id` bigint NULL COMMENT 'Unique user identifier',
+  `user_id` bigint unsigned NULL COMMENT 'Unique user identifier',
   `edit_date` timestamp NULL DEFAULT NULL COMMENT 'Date the message was edited in timestamp format',
   `text` TEXT COMMENT 'For text messages, the actual UTF-8 text of the message max message length 4096 char utf8',
   `entities` TEXT COMMENT 'For text messages, special entities like usernames, URLs, bot commands, etc. that appear in the text',
@@ -156,11 +156,11 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_edited_message` (
   FOREIGN KEY (`chat_id`) REFERENCES `glpi_plugin_telegrambot_chat` (`id`),
   FOREIGN KEY (`chat_id`, `message_id`) REFERENCES `glpi_plugin_telegrambot_message` (`chat_id`, `id`),
   FOREIGN KEY (`user_id`) REFERENCES `glpi_plugin_telegrambot_user` (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_telegram_update` (
   `id` bigint UNSIGNED COMMENT 'Update''s unique identifier',
-  `chat_id` bigint NULL DEFAULT NULL COMMENT 'Unique chat identifier',
+  `chat_id` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique chat identifier',
   `message_id` bigint UNSIGNED DEFAULT NULL COMMENT 'Unique message identifier',
   `inline_query_id` bigint UNSIGNED DEFAULT NULL COMMENT 'Unique inline query identifier',
   `chosen_inline_result_id` bigint UNSIGNED DEFAULT NULL COMMENT 'Local chosen inline result identifier',
@@ -179,12 +179,12 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_telegram_update` (
   FOREIGN KEY (`chosen_inline_result_id`) REFERENCES `glpi_plugin_telegrambot_chosen_inline_result` (`id`),
   FOREIGN KEY (`callback_query_id`) REFERENCES `glpi_plugin_telegrambot_callback_query` (`id`),
   FOREIGN KEY (`edited_message_id`) REFERENCES `glpi_plugin_telegrambot_edited_message` (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_conversation` (
   `id` bigint(20) unsigned AUTO_INCREMENT COMMENT 'Unique identifier for this entry',
-  `user_id` bigint NULL DEFAULT NULL COMMENT 'Unique user identifier',
-  `chat_id` bigint NULL DEFAULT NULL COMMENT 'Unique user or chat identifier',
+  `user_id` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique user identifier',
+  `chat_id` bigint unsigned NULL DEFAULT NULL COMMENT 'Unique user or chat identifier',
   `status` ENUM('active', 'cancelled', 'stopped') NOT NULL DEFAULT 'active' COMMENT 'Conversation state',
   `command` varchar(160) DEFAULT '' COMMENT 'Default command to execute',
   `notes` text DEFAULT NULL COMMENT 'Data stored from command',
@@ -198,11 +198,11 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_conversation` (
 
   FOREIGN KEY (`user_id`) REFERENCES `glpi_plugin_telegrambot_user` (`id`),
   FOREIGN KEY (`chat_id`) REFERENCES `glpi_plugin_telegrambot_chat` (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_botan_shortener` (
   `id` bigint UNSIGNED AUTO_INCREMENT COMMENT 'Unique identifier for this entry',
-  `user_id` bigint NULL COMMENT 'Unique user identifier',
+  `user_id` bigint unsigned NULL COMMENT 'Unique user identifier',
   `url` text NOT NULL COMMENT 'Original URL',
   `short_url` CHAR(255) NOT NULL DEFAULT '' COMMENT 'Shortened URL',
   `created_at` timestamp NULL DEFAULT NULL COMMENT 'Entry date creation',
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_botan_shortener` (
   PRIMARY KEY (`id`),
 
   FOREIGN KEY (`user_id`) REFERENCES `glpi_plugin_telegrambot_user` (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_request_limiter` (
   `id` bigint UNSIGNED AUTO_INCREMENT COMMENT 'Unique identifier for this entry',
@@ -220,4 +220,4 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_request_limiter` (
   `created_at` timestamp NULL DEFAULT NULL COMMENT 'Entry date creation',
 
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
