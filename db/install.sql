@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_configs` (
   `client_group_chat_field` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `client_group_topic_field` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `client_last_update_id` bigint unsigned NOT NULL DEFAULT 0,
-  `updated_at TIMESTAMP NULL DEFAULT NULL,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
