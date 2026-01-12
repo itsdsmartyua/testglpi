@@ -6,11 +6,10 @@ if (!defined('GLPI_ROOT')) {
 }
 
 /**
- * Telegram notification channel settings
- * GLPI 11 compatibility:
- * - canView()/canUpdate() must be static (CommonGLPI)
- * - getName($options = []) signature
- * - showForm($ID, array $options = []) signature
+ * Telegram notification channel settings (GLPI 11)
+ * NotificationSetting is abstract and requires:
+ * - getEnableLabel()
+ * - showFormConfig()
  */
 class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 {
@@ -34,6 +33,27 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       return Session::haveRight('config', UPDATE);
    }
 
+   /**
+    * Required by NotificationSetting
+    */
+   public function getEnableLabel(): string
+   {
+      return __('Enable Telegram notifications', 'telegrambot');
+   }
+
+   /**
+    * Required by NotificationSetting (GLPI 11)
+    * This is the form shown in Setup > Notifications > Settings for this mode.
+    */
+   public function showFormConfig($options = []): bool
+   {
+      // GLPI calls this in settings screen
+      return $this->showForm(1, is_array($options) ? $options : []);
+   }
+
+   /**
+    * CommonDBTM signature
+    */
    public function showForm($ID, array $options = []): bool
    {
       if (!self::canView()) {
@@ -95,6 +115,9 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       return true;
    }
 
+   /**
+    * Our front controller calls this after submit
+    */
    public function postForm(array $post): bool
    {
       if (!self::canUpdate()) {
