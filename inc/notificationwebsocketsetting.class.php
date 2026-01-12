@@ -7,8 +7,10 @@ if (!defined('GLPI_ROOT')) {
 
 /**
  * Telegram notification channel settings
- * - Extends NotificationSetting (aliased in hook.php for GLPI 11)
- * - Method signatures must be compatible with CommonDBTM in GLPI 11
+ * GLPI 11 compatibility:
+ * - canView()/canUpdate() must be static (CommonGLPI)
+ * - getName($options = []) signature
+ * - showForm($ID, array $options = []) signature
  */
 class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 {
@@ -17,31 +19,24 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
       return __('Telegram', 'telegrambot');
    }
 
-   /**
-    * GLPI 11 compatibility: CommonDBTM::getName($options = [])
-    * Must NOT force return type.
-    */
    public function getName($options = [])
    {
       return 'telegram';
    }
 
-   public function canView(): bool
+   public static function canView(): bool
    {
       return Session::haveRight('config', READ);
    }
 
-   public function canUpdate(): bool
+   public static function canUpdate(): bool
    {
       return Session::haveRight('config', UPDATE);
    }
 
-   /**
-    * GLPI compatibility: CommonDBTM::showForm($ID, array $options = [])
-    */
    public function showForm($ID, array $options = []): bool
    {
-      if (!$this->canView()) {
+      if (!self::canView()) {
          return false;
       }
 
@@ -102,7 +97,7 @@ class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 
    public function postForm(array $post): bool
    {
-      if (!$this->canUpdate()) {
+      if (!self::canUpdate()) {
          return false;
       }
       if (!Session::checkCSRF($post)) {
