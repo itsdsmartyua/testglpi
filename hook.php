@@ -29,6 +29,22 @@ function plugin_init_telegrambot(): void
       }
       require_once $f;
    }
+// ---- Register Telegram notification mode (GLPI 11 compatible) ----
+if (class_exists('Glpi\\Notification\\NotificationSetting')) {
+   if (!class_exists('NotificationSetting')) {
+      class_alias('Glpi\\Notification\\NotificationSetting', 'NotificationSetting');
+   }
+}
+
+if (class_exists('Notification_NotificationTemplate')
+    && method_exists('Notification_NotificationTemplate', 'registerMode')) {
+
+   Notification_NotificationTemplate::registerMode(
+      'telegram',
+      __('Telegram', 'telegrambot'),
+      'telegrambot'
+   );
+}
 
    if (!(new Plugin())->isActivated('telegrambot')) {
       return;
