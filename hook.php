@@ -7,20 +7,20 @@ function plugin_init_telegrambot(): void
 
    $PLUGIN_HOOKS['csrf_compliant']['telegrambot'] = true;
 
-   // Страница настроек плагина (твоя текущая форма)
+   // Страница настроек плагина
    $PLUGIN_HOOKS['config_page']['telegrambot'] = 'front/notificationwebsocketsetting.form.php';
 
-   // Подключаем классы плагина
+   // Подключаем только реально существующие классы
    require_once __DIR__ . '/inc/bot.class.php';
-   require_once __DIR__ . '/inc/notificationtelegramsetting.class.php';      // <-- ВАЖНО (для /front/setup.notification.php)
-   require_once __DIR__ . '/inc/notificationtelegrambot.class.php';
-   require_once __DIR__ . '/inc/notificationtelegrambotsetting.class.php';
+   require_once __DIR__ . '/inc/notificationwebsocketsetting.class.php';
+   require_once __DIR__ . '/inc/notificationtelegramsetting.class.php';
 
+   // Если плагин не активен — не регистрируем режимы/настройки
    if (!(new Plugin())->isActivated('telegrambot')) {
       return;
    }
 
-   // 1) Регистрируем новый MODE в уведомлениях (чтобы появился в "Режим" в шаблонах)
+   // 1) Регистрируем режим "telegram" (появится в "Режим" у шаблонов уведомлений)
    if (class_exists('Notification_NotificationTemplate')) {
       Notification_NotificationTemplate::registerMode(
          'telegram',
@@ -29,7 +29,7 @@ function plugin_init_telegrambot(): void
       );
    }
 
-   // 2) Регистрируем настройки MODE для страницы "Настройки → Уведомления"
+   // 2) Регистрируем форму настроек режима на странице "Настройки → Уведомления"
    if (class_exists('NotificationSettingConfig')) {
       NotificationSettingConfig::register(
          'telegram',
