@@ -1,54 +1,61 @@
 <?php
 declare(strict_types=1);
 
-if (!defined('GLPI_ROOT')) {
-   die("Sorry. You can't access this file directly");
-}
+require_once __DIR__ . '/bot.class.php';
 
-/**
- * Cron handler for TelegramBot plugin
- * Make this file idempotent:
- * - avoid fatal "Cannot redeclare" if included twice by GLPI/hook
- */
-if (!class_exists('PluginTelegrambotCron', false)) {
-   class PluginTelegrambotCron
-   {
-      /**
-       * Main cron logic (CamelCase)
-       */
-      public static function cronMessagelistener(CronTask $task): int
-      {
-         $result = PluginTelegrambotBot::runClientBot();
+function plugin_telegrambot_cronMessagelistener(): int
+{
+   $telegram = PluginTelegrambotBot::getTelegram(PluginTelegrambotBot::BOT_CLIENT);
+   if (!$telegram) {
+      return 0;
+   }
 
-         if (!empty($result['ok'])) {
-            $handled = (int)($result['handled'] ?? 0);
-            $task->log("Telegram client bot handled updates: {$handled}");
-            return $handled;
-         }
+   $cfg = PluginTelegrambotBot::getConfig();
+   $offset = (int)($cfg['client_last_update_id'] ?? 0);
+   $offset = $offset > 0 ? ($offset + 1) : 0;
 
-         $error = (string)($result['error'] ?? 'unknown error');
-         $task->log("Telegram client bot error: {$error}");
-         return 0;
+   \Longman\TelegramBot\Request::initialize($telegram);
+   $telegram->addCommandsPaths([__DIR__ . '/../commands']);
+
+   try {
+      $updates = \Longman\TelegramBot\Request::getUpdates([
+         'offset'  => $offset,
+         'timeout' => 0,
+      ]);
+   } catch (\Throwable $e) {
+      return 0;
+   }
+
+   if (!$updates->isOk()) {
+      return 0;
+   }
+
+   $result = $updates->getResult();
+   if (!is_array($result) || count($result) === 0) {
+      return 0;
+   }
+
+   $max_update_id = 0;
+   foreach ($result as $upd) {
+      if (is_object($upd) && method_exists($upd, 'getUpdateId')) {
+         $max_update_id = max($max_update_id, (int)$upd->getUpdateId());
       }
    }
+
+   try {
+      $telegram->handleGetUpdates();
+   } catch (\Throwable $e) {
+      // ignore
+   }
+
+   if ($max_update_id > 0) {
+      PluginTelegrambotBot::updateClientLastUpdateId($max_update_id);
+   }
+
+   return 1;
 }
 
-/**
- * Cron entrypoint (CamelCase)
- */
-if (!function_exists('plugin_telegrambot_cronMessagelistener')) {
-   function plugin_telegrambot_cronMessagelistener(CronTask $task): int
-   {
-      return PluginTelegrambotCron::cronMessagelistener($task);
-   }
-}
-
-/**
- * Lowercase wrapper (GLPI sometimes calls lowercase)
- */
-if (!function_exists('plugin_telegrambot_cronmessagelistener')) {
-   function plugin_telegrambot_cronmessagelistener(CronTask $task): int
-   {
-      return plugin_telegrambot_cronMessagelistener($task);
-   }
+function plugin_telegrambot_cronmessagelistener(): int
+{
+   return plugin_telegrambot_cronMessagelistener();
 }

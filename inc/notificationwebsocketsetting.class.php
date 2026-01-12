@@ -1,108 +1,99 @@
 <?php
 declare(strict_types=1);
 
-if (!defined('GLPI_ROOT')) {
-   die("Sorry. You can't access this file directly");
+require_once __DIR__ . '/bot.class.php';
+
+if (!class_exists('NotificationSetting') && class_exists('Glpi\\Notification\\NotificationSetting')) {
+   class_alias('Glpi\\Notification\\NotificationSetting', 'NotificationSetting');
 }
 
 class PluginTelegrambotNotificationWebsocketSetting extends NotificationSetting
 {
    public static function getTypeName($nb = 0): string
    {
-      return __('Telegram', 'telegrambot');
+      return 'Telegram';
    }
 
-   public function getName($options = [])
+   public static function getEnableLabel(): string
    {
-      return 'telegram';
+      return __('Telegram notifications', 'telegrambot');
    }
 
-   public static function canView(): bool
+   public static function ensureOneRow(): void
    {
-      return (bool) Session::haveRight('config', READ);
-   }
-
-   public static function canUpdate(): bool
-   {
-      return (bool) Session::haveRight('config', UPDATE);
-   }
-
-   public function getEnableLabel(): string
-   {
-      return __('Enable Telegram notifications', 'telegrambot');
-   }
-
-   public function showFormConfig($options = []): bool
-   {
-      return $this->showForm(1, is_array($options) ? $options : []);
-   }
-
-   public function showForm($ID, array $options = []): bool
-   {
-      if (!self::canView()) {
-         return false;
+      global $DB;
+      $table = 'glpi_plugin_telegrambot_configs';
+      if (!$DB->tableExists($table)) {
+         return;
       }
+      $res = $DB->query("SELECT id FROM `$table` ORDER BY id ASC LIMIT 1");
+      if (!$res || $DB->numrows($res) === 0) {
+         $DB->query("INSERT INTO `$table` (`notification_bot_token`,`client_bot_token`,`updated_at`) VALUES ('','','" . $DB->escape(date('Y-m-d H:i:s')) . "')");
+      }
+   }
 
+   public static function showFormConfig($options = []): bool
+   {
       global $CFG_GLPI;
 
-      $cfg    = PluginTelegrambotBot::getConfig();
+      self::ensureOneRow();
+      $cfg = PluginTelegrambotBot::getConfig();
+
       $action = $CFG_GLPI['root_doc'] . '/plugins/telegrambot/front/notificationwebsocketsetting.form.php';
 
-      echo "<form method='post' action='" . Html::cleanInputText($action) . "'>";
-      echo "<div class='center spaced'>";
+      echo "<form method='post' action='" . htmlescape($action) . "'>";
+      echo Html::hidden('_glpi_csrf_token', ['value' => Session::getNewCSRFToken()]);
 
-      echo "<table class='tab_cadre_fixe'>";
-      echo "<tr><th colspan='2'>" . __('Telegram channel settings', 'telegrambot') . "</th></tr>";
+      echo "<div class='card'>";
+      echo "<div class='card-header'><h3>Telegram channel settings</h3></div>";
+      echo "<div class='card-body'>";
 
-      echo "<tr class='tab_bg_1'><td width='35%'>" . __('Notification bot token', 'telegrambot') . "</td>";
-      echo "<td><input type='password' name='notification_bot_token' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['notification_bot_token'] ?? '')) . "'></td></tr>";
+      self::renderTextRow('notification_bot_token', __('Notification bot token', 'telegrambot'), (string)($cfg['notification_bot_token'] ?? ''), true);
+      self::renderTextRow('client_bot_token', __('Client bot token', 'telegrambot'), (string)($cfg['client_bot_token'] ?? ''), true);
 
-      echo "<tr class='tab_bg_1'><td>" . __('Client bot token', 'telegrambot') . "</td>";
-      echo "<td><input type='password' name='client_bot_token' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['client_bot_token'] ?? '')) . "'></td></tr>";
+      echo "<h4 class='mt-3'>Fields plugin mapping (Users/Groups)</h4>";
+      self::renderTextRow('user_chat_field', 'user_chat_field', (string)($cfg['user_chat_field'] ?? 'telegram_chat_id'));
+      self::renderTextRow('group_chat_field', 'group_chat_field', (string)($cfg['group_chat_field'] ?? 'telegram_chat_id'));
+      self::renderTextRow('group_topic_field', 'group_topic_field (optional)', (string)($cfg['group_topic_field'] ?? 'telegram_topic_id'));
 
-      echo "<tr><th colspan='2'>" . __('Fields plugin mapping (Users/Groups)', 'telegrambot') . "</th></tr>";
-
-      echo "<tr class='tab_bg_1'><td>" . __('user_chat_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='user_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['user_chat_field'] ?? 'telegram_chat_id')) . "'></td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>" . __('group_chat_field', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='group_chat_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_chat_field'] ?? 'telegram_chat_id')) . "'></td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>" . __('group_topic_field (optional)', 'telegrambot') . "</td>";
-      echo "<td><input type='text' name='group_topic_field' style='width:100%;' value='" . Html::cleanInputText((string)($cfg['group_topic_field'] ?? 'telegram_topic_id')) . "'></td></tr>";
-
-      echo "</table>";
-
-      echo "<div class='center'>";
-      // GLPI 11 CSRF (listener will validate it)
-      echo "<input type='hidden' name='_glpi_csrf_token' value='" . Html::cleanInputText(Session::getNewCSRFToken()) . "'>";
-      echo "<input type='submit' name='update' class='submit' value='" . __('Save') . "'>";
+      echo "<div class='mt-3'>";
+      echo "<button class='btn btn-primary' type='submit' name='update' value='1'>" . __('Save') . "</button>";
       echo "</div>";
 
-      echo "</div>";
-      Html::closeForm();
+      echo "</div></div>";
+      echo "</form>";
 
       return true;
    }
 
-   public function postForm(array $post): bool
+   private static function renderTextRow(string $name, string $label, string $value, bool $password = false): void
    {
-      if (!self::canUpdate()) {
-         return false;
+      $type = $password ? 'password' : 'text';
+      echo "<div class='form-group row mb-2'>";
+      echo "<label class='col-sm-3 col-form-label'>" . htmlescape($label) . "</label>";
+      echo "<div class='col-sm-9'>";
+      echo "<input class='form-control' type='$type' name='" . htmlescape($name) . "' value='" . htmlescape($value) . "'>";
+      echo "</div>";
+      echo "</div>";
+   }
+
+   public function postForm(array $post): void
+   {
+      Session::checkCSRF($post);
+      Session::checkRight('config', UPDATE);
+
+      $input = [];
+      foreach ([
+         'notification_bot_token','client_bot_token',
+         'user_chat_field','user_topic_field',
+         'group_chat_field','group_topic_field',
+         'client_user_chat_field','client_user_topic_field',
+         'client_group_chat_field','client_group_topic_field'
+      ] as $k) {
+         if (isset($post[$k])) {
+            $input[$k] = (string)$post[$k];
+         }
       }
-
-      // IMPORTANT: do NOT call Session::checkCSRF() here.
-      // GLPI 11 checks CSRF before controller execution (CheckCsrfListener).
-
-      $data = [
-         'notification_bot_token' => $post['notification_bot_token'] ?? '',
-         'client_bot_token'       => $post['client_bot_token'] ?? '',
-         'user_chat_field'        => $post['user_chat_field'] ?? 'telegram_chat_id',
-         'group_chat_field'       => $post['group_chat_field'] ?? 'telegram_chat_id',
-         'group_topic_field'      => $post['group_topic_field'] ?? 'telegram_topic_id',
-      ];
-
-      PluginTelegrambotBot::updateConfig($data);
-      return true;
+      PluginTelegrambotBot::saveConfig($input);
    }
 }

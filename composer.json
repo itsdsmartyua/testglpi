@@ -1,20 +1,20 @@
 {
-  "name": "acme/glpi-telegrambot",
-  "description": "Telegram notifications + client bot for GLPI 11 using Fields plugin",
-  "type": "project",
-  "license": "MIT",
+  "name": "itsdsmartyua/glpi-telegrambot",
+  "description": "Telegram notifications + client bot for GLPI 11",
+  "type": "glpi-plugin",
+  "license": "GPL-2.0-or-later",
   "require": {
     "php": ">=8.2",
-    "longman/telegram-bot": "^0.83"
+    "longman/telegram-bot": "^0.81",
+    "guzzlehttp/guzzle": "^7.7"
   },
   "autoload": {
     "psr-4": {
-      "PluginTelegrambot\\": "inc/"
-    }
-  },
-  "config": {
-    "optimize-autoloader": true,
-    "preferred-install": "dist",
-    "sort-packages": true
+      "GlpiPlugin\\Telegrambot\\": "inc/"
+    },
+    "classmap": [
+      "inc/",
+      "commands/"
+    ]
   }
 }

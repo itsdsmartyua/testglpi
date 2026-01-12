@@ -15,15 +15,5 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_telegrambot_configs` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `glpi_plugin_telegrambot_configs` (
-  `id`, `notification_bot_token`, `client_bot_token`,
-  `user_chat_field`, `user_topic_field`, `group_chat_field`, `group_topic_field`,
-  `client_user_chat_field`, `client_user_topic_field`, `client_group_chat_field`, `client_group_topic_field`,
-  `client_last_update_id`, `updated_at`
-)
-SELECT
-  1, '', '',
-  'telegram_chat_id', 'telegram_topic_id', 'telegram_chat_id', 'telegram_topic_id',
-  '', '', '', '',
-  0, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM `glpi_plugin_telegrambot_configs` WHERE `id` = 1);
+INSERT IGNORE INTO `glpi_configs` (`context`, `name`, `value`)
+VALUES ('core', 'notifications_telegram', '1');

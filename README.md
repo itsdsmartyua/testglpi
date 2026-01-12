@@ -1,29 +1,20 @@
-# GLPI TelegramBot (GLPI 11.0.4 / PHP 8.2 / MariaDB)
+# GLPI TelegramBot (GLPI 11)
 
-Плагин добавляет интеграцию Telegram для GLPI 11:
-- **Bot #1**: отправка уведомлений GLPI через стандартный механизм Notifications
-- **Bot #2**: клиентский бот (команды пользователей / специалистов) — сейчас только статистика
-
-Ключевая идея: **chat_id / topic_id НЕ хранятся в таблицах плагина**, а берутся из **полей плагина Fields** в объектах **Users** и **Groups**. Заполняются администратором вручную.
-
----
-
-## Требования
-
-- GLPI 11.0.4
-- PHP 8.2
-- MariaDB/MySQL (InnoDB + utf8mb4)
-- Плагин **Fields** (для создания полей у Users/Groups)
-- Composer (для зависимостей Telegram SDK)
-
----
+## Настройки (что означает каждое поле)
+- **Notification bot token** — токен бота, который отправляет уведомления из GLPI в Telegram.
+- **Client bot token** — токен бота, который отвечает на команды пользователей (через cron/polling).
+- **user_chat_field** — shortname поля из плагина Fields (Users), где хранится Telegram chat_id пользователя.
+- **group_chat_field** — shortname поля из Fields (Groups), где хранится Telegram chat_id группы/канала.
+- **group_topic_field (optional)** — shortname поля из Fields (Groups), где хранится message_thread_id (topic) для супергрупп.
 
 ## Установка
-
-### 1) Размещение плагина
-Папка должна быть:
-`/var/www/glpi/plugins/telegrambot`
-
-Обновить код:
 ```bash
-cd /var/www/glpi/plugins/telegrambot || exit 1; git pull origin main
+cd /var/www/glpi/plugins/telegrambot
+composer install --no-dev
+```
+
+Далее в GLPI: Marketplace → Плагины → TelegramBot → Установить → Включить.
+
+## Cron
+Плагин объявляет cron-задачу `messagelistener` (polling команд).
+

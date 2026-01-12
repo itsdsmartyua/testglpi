@@ -1,17 +1,24 @@
 <?php
-include ("../../../inc/includes.php");
+declare(strict_types=1);
+
+include_once __DIR__ . '/../../../inc/includes.php';
 
 global $CFG_GLPI;
-header('Content-Type: text/plain; charset=utf-8');
 
-echo "notifications_telegram = " . ($CFG_GLPI['notifications_telegram'] ?? 'NULL') . PHP_EOL;
-echo "modes:" . PHP_EOL;
+Session::checkRight('config', READ);
 
-if (class_exists('Notification_NotificationTemplate')) {
-   $modes = Notification_NotificationTemplate::getModes();
-   foreach ($modes as $k => $v) {
-      echo "- $k: " . ($v['label'] ?? '') . " (from=" . ($v['from'] ?? '') . ")" . PHP_EOL;
-   }
-} else {
-   echo "Notification_NotificationTemplate class NOT loaded" . PHP_EOL;
+require_once __DIR__ . '/../inc/notificationwebsocketsetting.class.php';
+
+if (isset($_POST['update'])) {
+   Session::checkRight('config', UPDATE);
+   $s = new PluginTelegrambotNotificationWebsocketSetting();
+   $s->postForm($_POST);
+   Html::redirect($CFG_GLPI['root_doc'] . '/plugins/telegrambot/front/notificationwebsocketsetting.form.php');
+   exit;
 }
+
+Html::header(__('Telegram', 'telegrambot'), $_SERVER['PHP_SELF'], 'config', 'notification');
+
+PluginTelegrambotNotificationWebsocketSetting::showFormConfig([]);
+
+Html::footer();
