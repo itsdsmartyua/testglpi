@@ -12,7 +12,7 @@ require_once __DIR__ . '/../inc/notificationwebsocketsetting.class.php';
 if (isset($_POST['update'])) {
    Session::checkRight('config', UPDATE);
    $s = new PluginTelegrambotNotificationWebsocketSetting();
-   $s->postForm($_POST);
+   $s->showFormConfig([]);
    Html::redirect($CFG_GLPI['root_doc'] . '/plugins/telegrambot/front/notificationwebsocketsetting.form.php');
    exit;
 }
