@@ -38,3 +38,17 @@ function plugin_init_telegrambot(): void
 
       // Cron
       $PLUGIN_HOOKS['cron']['telegrambot'] = [
+         'cronMessagelistener' => [
+            'function'   => 'plugin_telegrambot_cronMessagelistener',
+            'frequency'  => MINUTE_TIMESTAMP,
+            'mode'       => CronTask::MODE_EXTERNAL
+         ],
+         // lowercase wrapper
+         'cronmessagelistener' => [
+            'function'   => 'plugin_telegrambot_cronmessagelistener',
+            'frequency'  => MINUTE_TIMESTAMP,
+            'mode'       => CronTask::MODE_EXTERNAL
+         ],
+      ];
+   }
+}
