@@ -1,27 +1,27 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../../inc/includes.php';
-
 if (!defined('GLPI_ROOT')) {
-   die("Sorry. You can't access this file directly");
+   include_once('../../inc/includes.php');
 }
 
-Session::checkLoginUser();
+Session::checkCentralAccess();
+
+require_once __DIR__ . '/../inc/bot.class.php';
+require_once __DIR__ . '/../inc/notificationwebsocketsetting.class.php';
 
 $setting = new PluginTelegrambotNotificationWebsocketSetting();
 
 if (isset($_POST['update'])) {
-   if ($setting->postForm($_POST)) {
-      Html::back();
-   }
+   // Save
+   $setting->postForm($_POST);
    Html::back();
+   exit;
 }
 
-Html::header(__('Telegram', 'telegrambot'), $_SERVER['PHP_SELF'], 'config', 'notification', 'config');
+// Display
+Html::header(__('Telegram', 'telegrambot'), $_SERVER['PHP_SELF'], 'config', 'notification');
 
-echo "<div class='center'>";
-$setting->showForm();
-echo "</div>";
+$setting->showForm(1, []);
 
 Html::footer();
